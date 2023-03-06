@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from 'axios'
-import { SpockPoll, ParsedSpockPoll } from './spockPoll'
+import { SpockPoll, ParsedSpockPoll } from './polls'
 
 export default async function fetchSpockPolls(): Promise<ParsedSpockPoll[]> {
   const res: AxiosResponse<SpockPoll> = await axios.post(

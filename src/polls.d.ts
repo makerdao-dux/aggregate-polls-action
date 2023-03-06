@@ -21,3 +21,8 @@ export type ParsedSpockPoll = {
   pollId: number
   url: string
 }
+
+export type PollWithRawMetadata = {
+  pollId: number
+  metadata: string
+}

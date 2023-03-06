@@ -1,6 +1,45 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 4238:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const axios_1 = __importDefault(__nccwpck_require__(8757));
+function fetchGithubPolls(parsedSpockPolls) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const pollsRes = yield Promise.allSettled(parsedSpockPolls.map(({ pollId, url }) => __awaiter(this, void 0, void 0, function* () {
+            const res = yield axios_1.default.get(url);
+            return {
+                pollId,
+                metadata: res.data,
+            };
+        })));
+        const polls = pollsRes
+            .map((promise) => (promise.status === 'fulfilled' ? promise.value : null))
+            .filter((poll) => !!poll);
+        return polls;
+    });
+}
+exports["default"] = fetchGithubPolls;
+
+
+/***/ }),
+
 /***/ 1032:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -23,7 +62,6 @@ const axios_1 = __importDefault(__nccwpck_require__(8757));
 function fetchSpockPolls() {
     return __awaiter(this, void 0, void 0, function* () {
         const res = yield axios_1.default.post('https://pollingdb2-mainnet-prod.makerdux.com/api/v1', { operationName: 'activePolls' });
-        console.log(res.data);
         const spockPollsData = res.data.data.activePolls.edges.map(({ node: { pollId, url } }) => ({ pollId, url }));
         return spockPollsData;
     });
@@ -75,12 +113,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
+const fetchGithubPolls_1 = __importDefault(__nccwpck_require__(4238));
 const fetchSpockPolls_1 = __importDefault(__nccwpck_require__(1032));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const spockPolls = yield (0, fetchSpockPolls_1.default)();
-            console.log(spockPolls);
+            const pollsWithRawMetadata = yield (0, fetchGithubPolls_1.default)(spockPolls);
+            console.log(pollsWithRawMetadata);
         }
         catch (error) {
             if (error instanceof Error)
