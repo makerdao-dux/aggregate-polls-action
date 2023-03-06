@@ -9,7 +9,7 @@ export default async function fetchGithubPolls(
       const res: AxiosResponse<string> = await axios.get(url)
       return {
         pollId,
-        metadata: res.data,
+        rawMetadata: res.data,
       }
     })
   )

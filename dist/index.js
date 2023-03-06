@@ -26,7 +26,7 @@ function fetchGithubPolls(parsedSpockPolls) {
             const res = yield axios_1.default.get(url);
             return {
                 pollId,
-                metadata: res.data,
+                rawMetadata: res.data,
             };
         })));
         const polls = pollsRes
@@ -115,12 +115,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const fetchGithubPolls_1 = __importDefault(__nccwpck_require__(4238));
 const fetchSpockPolls_1 = __importDefault(__nccwpck_require__(1032));
+const parseGithubMetadata_1 = __nccwpck_require__(1018);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const spockPolls = yield (0, fetchSpockPolls_1.default)();
             const pollsWithRawMetadata = yield (0, fetchGithubPolls_1.default)(spockPolls);
-            console.log(pollsWithRawMetadata);
+            const polls = (0, parseGithubMetadata_1.parseGithubMetadata)(pollsWithRawMetadata);
+            console.log(polls);
         }
         catch (error) {
             if (error instanceof Error)
@@ -129,6 +131,30 @@ function run() {
     });
 }
 run();
+
+
+/***/ }),
+
+/***/ 1018:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseGithubMetadata = void 0;
+function parseGithubMetadata(pollsWithRawMetadata) {
+    const polls = pollsWithRawMetadata.map(({ pollId, rawMetadata }) => {
+        // RegEx to extract title from rawMetadata string
+        const titleRegex = /(?<=title: )(.*?)(?=\n)/i;
+        const title = rawMetadata.match(titleRegex);
+        return {
+            pollId,
+            title: title ? title[0] : '',
+        };
+    });
+    return polls;
+}
+exports.parseGithubMetadata = parseGithubMetadata;
 
 
 /***/ }),
