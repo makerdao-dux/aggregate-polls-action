@@ -6,13 +6,11 @@ import { parseGithubMetadata } from './parseGithubMetadata'
 
 async function run(): Promise<void> {
   try {
-    const pollTagsFile = core.getInput('tags-file')
+    const pollTagsFilePath = core.getInput('tags-file')
 
     const spockPolls = await fetchSpockPolls()
     const pollsWithRawMetadata = await fetchGithubPolls(spockPolls)
-    const polls = parseGithubMetadata(pollsWithRawMetadata)
-
-    console.log(polls)
+    const polls = parseGithubMetadata(pollsWithRawMetadata, pollTagsFilePath)
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }

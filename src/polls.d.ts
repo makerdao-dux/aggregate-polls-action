@@ -30,4 +30,12 @@ export type PollWithRawMetadata = {
 export type PollMetadata = {
   pollId: number
   title: string
+  tags: string[]
+  type: string
+}
+
+export type PollVoteType = 'Plurality Voting' | 'Ranked Choice IRV' | 'Unknown'
+
+export type PollTags = {
+  [key: string]: string[]
 }

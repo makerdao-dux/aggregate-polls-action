@@ -7,9 +7,16 @@ export default async function fetchSpockPolls(): Promise<ParsedSpockPoll[]> {
     { operationName: 'activePolls' }
   )
 
-  const spockPollsData = res.data.data.activePolls.edges.map(
-    ({ node: { pollId, url } }) => ({ pollId, url })
-  )
+  const spockPollsData = res.data.data.activePolls.edges
+    .map(({ node: { pollId, url, multiHash } }) => ({ pollId, url, multiHash }))
+    // Removes duplicate entries
+    .reduce((acum, { pollId, url, multiHash }, i, pollArray) => {
+      if (i === pollArray.findIndex((p) => p.multiHash === multiHash)) {
+        acum.push({ pollId, url })
+      }
+
+      return acum
+    }, [] as ParsedSpockPoll[])
 
   return spockPollsData
 }
