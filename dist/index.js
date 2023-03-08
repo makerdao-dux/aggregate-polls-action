@@ -69,19 +69,9 @@ function fetchGithubPolls(parsedSpockPolls) {
             })));
             pollsRes.push(...settledPolls);
         }
-        // const pollsRes = await Promise.allSettled(
-        //   parsedSpockPolls.map(async ({ pollId, url }) => {
-        //     const res: AxiosResponse<string> = await axios.get(url)
-        //     return {
-        //       pollId,
-        //       rawMetadata: res.data,
-        //     }
-        //   })
-        // )
         const polls = pollsRes
             .map((promise) => (promise.status === 'fulfilled' ? promise.value : null))
             .filter((poll) => !!poll);
-        console.log(pollsRes.length, polls.length);
         return polls;
     });
 }
@@ -199,6 +189,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
+const fs_1 = __nccwpck_require__(7147);
 const constants_1 = __nccwpck_require__(5105);
 const fetchGithubPolls_1 = __importDefault(__nccwpck_require__(4238));
 const fetchSpockPolls_1 = __importDefault(__nccwpck_require__(1032));
@@ -208,6 +199,7 @@ function run() {
         try {
             const pollTagsFilePath = core.getInput('tags-file');
             const network = core.getInput('network');
+            const outputFilePath = core.getInput('output-file');
             if (network !== constants_1.SupportedNetworks.mainnet &&
                 network !== constants_1.SupportedNetworks.goerli) {
                 throw new Error('Unsupported network input parameter');
@@ -215,9 +207,8 @@ function run() {
             const spockPolls = yield (0, fetchSpockPolls_1.default)(network);
             const pollsWithRawMetadata = yield (0, fetchGithubPolls_1.default)(spockPolls);
             const polls = (0, parseGithubMetadata_1.parseGithubMetadata)(pollsWithRawMetadata, pollTagsFilePath);
-            console.log(polls.filter((p) => p.type === 'single-choice').length);
-            console.log(polls.filter((p) => p.type === 'rank-free').length);
-            console.log(polls.filter((p) => p.type === 'choose-free').length);
+            console.log(JSON.stringify(polls, null, 2));
+            (0, fs_1.writeFileSync)(outputFilePath, JSON.stringify(polls, null, 2));
         }
         catch (error) {
             if (error instanceof Error)

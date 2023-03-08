@@ -15,4 +15,4 @@ jobs:
         with:
           network: 'mainnet'
           tags-file: '__tests__/polls/poll-tags.json'
-          output-file: '/'
+          output-file: '__tests__/polls/polls.json'

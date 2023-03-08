@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
+import { writeFileSync } from 'fs'
 import { SupportedNetworks } from './constants'
 import fetchGithubPolls from './fetchGithubPolls'
-
 import fetchSpockPolls from './fetchSpockPolls'
 import { parseGithubMetadata } from './parseGithubMetadata'
 
@@ -9,6 +9,7 @@ async function run(): Promise<void> {
   try {
     const pollTagsFilePath = core.getInput('tags-file')
     const network = core.getInput('network')
+    const outputFilePath = core.getInput('output-file')
 
     if (
       network !== SupportedNetworks.mainnet &&
@@ -21,9 +22,7 @@ async function run(): Promise<void> {
     const pollsWithRawMetadata = await fetchGithubPolls(spockPolls)
     const polls = parseGithubMetadata(pollsWithRawMetadata, pollTagsFilePath)
 
-    console.log(polls.filter((p) => p.type === 'single-choice').length)
-    console.log(polls.filter((p) => p.type === 'rank-free').length)
-    console.log(polls.filter((p) => p.type === 'choose-free').length)
+    writeFileSync(outputFilePath, JSON.stringify(polls, null, 2))
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
