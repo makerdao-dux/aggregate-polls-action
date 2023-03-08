@@ -1,9 +1,12 @@
 import axios, { AxiosResponse } from 'axios'
+import { POLLING_DB_URLS, SupportedNetworks } from './constants'
 import { SpockPoll, ParsedSpockPoll } from './polls'
 
-export default async function fetchSpockPolls(): Promise<ParsedSpockPoll[]> {
+export default async function fetchSpockPolls(
+  network: SupportedNetworks
+): Promise<ParsedSpockPoll[]> {
   const res: AxiosResponse<SpockPoll> = await axios.post(
-    'https://pollingdb2-mainnet-prod.makerdux.com/api/v1',
+    POLLING_DB_URLS[network],
     { operationName: 'activePolls' }
   )
 

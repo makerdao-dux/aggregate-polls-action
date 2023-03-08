@@ -7,18 +7,27 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PollInputFormat = exports.POLL_VOTE_TYPE = void 0;
-exports.POLL_VOTE_TYPE = {
-    PLURALITY_VOTE: 'Plurality Voting',
-    RANKED_VOTE: 'Ranked Choice IRV',
-    UNKNOWN: 'Unknown',
-};
+exports.POLLING_DB_URLS = exports.POLL_VOTE_TYPE = exports.PollInputFormat = exports.SupportedNetworks = void 0;
+var SupportedNetworks;
+(function (SupportedNetworks) {
+    SupportedNetworks["mainnet"] = "mainnet";
+    SupportedNetworks["goerli"] = "goerli";
+})(SupportedNetworks = exports.SupportedNetworks || (exports.SupportedNetworks = {}));
 var PollInputFormat;
 (function (PollInputFormat) {
     PollInputFormat["singleChoice"] = "single-choice";
     PollInputFormat["rankFree"] = "rank-free";
     PollInputFormat["chooseFree"] = "choose-free";
 })(PollInputFormat = exports.PollInputFormat || (exports.PollInputFormat = {}));
+exports.POLL_VOTE_TYPE = {
+    PLURALITY_VOTE: 'Plurality Voting',
+    RANKED_VOTE: 'Ranked Choice IRV',
+    UNKNOWN: 'Unknown',
+};
+exports.POLLING_DB_URLS = {
+    [SupportedNetworks.mainnet]: 'https://pollingdb2-mainnet-prod.makerdux.com/api/v1',
+    [SupportedNetworks.goerli]: 'https://pollingdb2-goerli-staging.makerdux.com/api/v1',
+};
 
 
 /***/ }),
@@ -44,16 +53,35 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 function fetchGithubPolls(parsedSpockPolls) {
     return __awaiter(this, void 0, void 0, function* () {
-        const pollsRes = yield Promise.allSettled(parsedSpockPolls.map(({ pollId, url }) => __awaiter(this, void 0, void 0, function* () {
-            const res = yield axios_1.default.get(url);
-            return {
-                pollId,
-                rawMetadata: res.data,
-            };
-        })));
+        const spockPollsInChunks = [];
+        const chunkSize = 20;
+        const pollsRes = [];
+        for (let i = 0; i < parsedSpockPolls.length; i += chunkSize) {
+            spockPollsInChunks.push(parsedSpockPolls.slice(i, i + chunkSize));
+        }
+        for (let j = 0; j < spockPollsInChunks.length; j++) {
+            const settledPolls = yield Promise.allSettled(spockPollsInChunks[j].map(({ pollId, url }) => __awaiter(this, void 0, void 0, function* () {
+                const res = yield axios_1.default.get(url);
+                return {
+                    pollId,
+                    rawMetadata: res.data,
+                };
+            })));
+            pollsRes.push(...settledPolls);
+        }
+        // const pollsRes = await Promise.allSettled(
+        //   parsedSpockPolls.map(async ({ pollId, url }) => {
+        //     const res: AxiosResponse<string> = await axios.get(url)
+        //     return {
+        //       pollId,
+        //       rawMetadata: res.data,
+        //     }
+        //   })
+        // )
         const polls = pollsRes
             .map((promise) => (promise.status === 'fulfilled' ? promise.value : null))
             .filter((poll) => !!poll);
+        console.log(pollsRes.length, polls.length);
         return polls;
     });
 }
@@ -77,7 +105,6 @@ const fs_1 = __nccwpck_require__(7147);
 function assignTags(pollMetadata, pollTagsFilePath) {
     const tagsPath = path_1.default.join(process.cwd(), pollTagsFilePath);
     if (!(0, fs_1.existsSync)(tagsPath)) {
-        console.error(tagsPath, 'Tags file not found');
         throw new Error('Tags file does not exist');
     }
     const tagsFileContent = (0, fs_1.readFileSync)(tagsPath, 'utf8');
@@ -109,9 +136,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const axios_1 = __importDefault(__nccwpck_require__(8757));
-function fetchSpockPolls() {
+const constants_1 = __nccwpck_require__(5105);
+function fetchSpockPolls(network) {
     return __awaiter(this, void 0, void 0, function* () {
-        const res = yield axios_1.default.post('https://pollingdb2-mainnet-prod.makerdux.com/api/v1', { operationName: 'activePolls' });
+        const res = yield axios_1.default.post(constants_1.POLLING_DB_URLS[network], { operationName: 'activePolls' });
         const spockPollsData = res.data.data.activePolls.edges
             .map(({ node: { pollId, url, multiHash } }) => ({ pollId, url, multiHash }))
             // Removes duplicate entries
@@ -171,6 +199,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
+const constants_1 = __nccwpck_require__(5105);
 const fetchGithubPolls_1 = __importDefault(__nccwpck_require__(4238));
 const fetchSpockPolls_1 = __importDefault(__nccwpck_require__(1032));
 const parseGithubMetadata_1 = __nccwpck_require__(1018);
@@ -178,7 +207,12 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const pollTagsFilePath = core.getInput('tags-file');
-            const spockPolls = yield (0, fetchSpockPolls_1.default)();
+            const network = core.getInput('network');
+            if (network !== constants_1.SupportedNetworks.mainnet &&
+                network !== constants_1.SupportedNetworks.goerli) {
+                throw new Error('Unsupported network input parameter');
+            }
+            const spockPolls = yield (0, fetchSpockPolls_1.default)(network);
             const pollsWithRawMetadata = yield (0, fetchGithubPolls_1.default)(spockPolls);
             const polls = (0, parseGithubMetadata_1.parseGithubMetadata)(pollsWithRawMetadata, pollTagsFilePath);
             console.log(polls.filter((p) => p.type === 'single-choice').length);

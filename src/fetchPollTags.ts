@@ -9,7 +9,6 @@ export function assignTags(
   const tagsPath = path.join(process.cwd(), pollTagsFilePath)
 
   if (!existsSync(tagsPath)) {
-    console.error(tagsPath, 'Tags file not found')
     throw new Error('Tags file does not exist')
   }
 
