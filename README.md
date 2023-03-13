@@ -58,7 +58,7 @@ jobs:
           tags-file: 'governance/polls/meta/poll-tags.json'
           output-file: 'governance/polls/meta/polls.json'
       - name: Update pull request with polls changes 
-        uses: EndBug/add-and-commit@v9 # You can change this to use a specific version.
+        uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions[bot]
           author_email: github-actions[bot]@users.noreply.github.com
