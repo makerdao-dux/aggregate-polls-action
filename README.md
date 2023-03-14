@@ -2,104 +2,74 @@
   <a href="https://github.com/actions/typescript-action/actions"><img alt="typescript-action status" src="https://github.com/actions/typescript-action/workflows/build-test/badge.svg"></a>
 </p>
 
-# Create a JavaScript Action using TypeScript
+# Aggregate Poll Action
 
-Use this template to bootstrap the creation of a TypeScript action.:rocket:
+This GitHub action fetches the poll metadata for each poll in the polling DB, extracts the title and poll type, assigns the corresponding tags to each poll, and finally aggregates all of the polls into a single file, writing it to the disk.
 
-This template includes compilation support, tests, a validation workflow, publishing, and versioning guidance.  
+## Inputs
 
-If you are new, there's also a simpler introduction.  See the [Hello World JavaScript Action](https://github.com/actions/hello-world-javascript-action)
+### `network`
 
-## Create an action from this template
+**Required** The network from which to fetch polls from, either Mainnet or Goerli. Default: `mainnet`.
 
-Click the `Use this Template` and provide the new repo details for your action
+### `tags-file`
 
-## Code in Main
+**Required** The path to the file containing the Poll ID -> Tags mapping, used to assign tags to the polls from the DB. Default: `governance/polls/meta/poll-tags.json`
 
-> First, you'll need to have a reasonably modern version of `node` handy. This won't work with versions older than 9, for instance.
+### `output-file`
 
-Install the dependencies  
-```bash
-$ npm install
-```
+**Required** The path and name of the file that will be created containing the aggregated list of polls.
 
-Build the typescript and package it for distribution
-```bash
-$ npm run build && npm run package
-```
-
-Run the tests :heavy_check_mark:  
-```bash
-$ npm test
-
- PASS  ./index.test.js
-  ✓ throws invalid number (3ms)
-  ✓ wait 500 ms (504ms)
-  ✓ test runs (95ms)
-
-...
-```
-
-## Change action.yml
-
-The action.yml defines the inputs and output for your action.
-
-Update the action.yml with your name, description, inputs and outputs for your action.
-
-See the [documentation](https://help.github.com/en/articles/metadata-syntax-for-github-actions)
-
-## Change the Code
-
-Most toolkit and CI/CD operations involve async operations so the action is run in an async function.
-
-```javascript
-import * as core from '@actions/core';
-...
-
-async function run() {
-  try { 
-      ...
-  } 
-  catch (error) {
-    core.setFailed(error.message);
-  }
-}
-
-run()
-```
-
-See the [toolkit documentation](https://github.com/actions/toolkit/blob/master/README.md#packages) for the various packages.
-
-## Publish to a distribution branch
-
-Actions are run from GitHub repos so we will checkin the packed dist folder. 
-
-Then run [ncc](https://github.com/zeit/ncc) and push the results:
-```bash
-$ npm run package
-$ git add dist
-$ git commit -a -m "prod dependencies"
-$ git push origin releases/v1
-```
-
-Note: We recommend using the `--license` option for ncc, which will create a license file for all of the production node modules used in your project.
-
-Your action is now published! :rocket: 
-
-See the [versioning documentation](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
-
-## Validate
-
-You can now validate the action by referencing `./` in a workflow in your repo (see [test.yml](.github/workflows/test.yml))
+## Example usage
 
 ```yaml
-uses: ./
+uses: makerdao-dux/aggregate-polls-action@v1.1.2
 with:
-  milliseconds: 1000
+  network: "mainnet"
+  tags-file: "governance/polls/meta/poll-tags.json"
+  output-file: "governance/polls/meta/polls.json"
 ```
 
-See the [actions tab](https://github.com/actions/typescript-action/actions) for runs of this action! :rocket:
+### Full example: 
 
-## Usage:
+```yaml
+name: 'Aggregate Polls'
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - governance/polls/**
+      - '!governance/polls/meta/polls.json'
+  workflow_dispatch:
+jobs:
+  aggregate_polls:
+    runs-on: ubuntu-latest
+    name: Aggregates all of the polls into a single file, creating a pull request with the new file.
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Upload
+        id: upload
+        uses: makerdao-dux/aggregate-polls-action@v1.1.2
+        with:
+          network: 'mainnet'
+          tags-file: 'governance/polls/meta/poll-tags.json'
+          output-file: 'governance/polls/meta/polls.json'
+      - name: Update pull request with polls changes 
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: github-actions[bot]
+          author_email: github-actions[bot]@users.noreply.github.com
+          message: 'Added polls aggregated file'
+          add: 'governance/polls/meta/polls.json'
+          fetch: false
+          push: false
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+```
 
-After testing you can [create a v1 tag](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md) to reference the stable and latest V1 action
+Based on:
+- https://github.com/actions/typescript-action
+- https://docs.github.com/en/actions/creating-actions/creating-a-javascript-action
