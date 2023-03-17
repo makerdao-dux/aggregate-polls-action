@@ -20,9 +20,12 @@ async function run(): Promise<void> {
 
     const spockPolls = await fetchSpockPolls(network)
     const pollsWithRawMetadata = await fetchGithubPolls(spockPolls)
-    const polls = parseGithubMetadata(pollsWithRawMetadata, pollTagsFilePath)
+    const pollListData = parseGithubMetadata(
+      pollsWithRawMetadata,
+      pollTagsFilePath
+    )
 
-    writeFileSync(outputFilePath, JSON.stringify(polls, null, 2))
+    writeFileSync(outputFilePath, JSON.stringify(pollListData, null, 2))
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }

@@ -20,18 +20,25 @@ export type SpockPoll = {
 export type ParsedSpockPoll = {
   pollId: number
   url: string
+  slug: string
+  startDate: string
+  endDate: string
 }
 
-export type PollWithRawMetadata = {
-  pollId: number
+export type PollWithRawMetadata = Omit<ParsedSpockPoll, 'url'> & {
   rawMetadata: string
 }
 
-export type PollMetadata = {
-  pollId: number
+export type PollOptions = {
+  [key: string]: string
+}
+
+export type PollMetadata = Omit<PollWithRawMetadata, 'rawMetadata'> & {
   title: string
-  tags: string[]
+  summary: string
   type: string
+  tags: string[]
+  options: PollOptions
 }
 
 export type PollVoteType = 'Plurality Voting' | 'Ranked Choice IRV' | 'Unknown'

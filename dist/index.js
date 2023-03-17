@@ -46,6 +46,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -60,12 +71,10 @@ function fetchGithubPolls(parsedSpockPolls) {
             spockPollsInChunks.push(parsedSpockPolls.slice(i, i + chunkSize));
         }
         for (let j = 0; j < spockPollsInChunks.length; j++) {
-            const settledPolls = yield Promise.allSettled(spockPollsInChunks[j].map(({ pollId, url }) => __awaiter(this, void 0, void 0, function* () {
+            const settledPolls = yield Promise.allSettled(spockPollsInChunks[j].map((_a) => __awaiter(this, void 0, void 0, function* () {
+                var { url } = _a, poll = __rest(_a, ["url"]);
                 const res = yield axios_1.default.get(url);
-                return {
-                    pollId,
-                    rawMetadata: res.data,
-                };
+                return Object.assign(Object.assign({}, poll), { rawMetadata: res.data });
             })));
             pollsRes.push(...settledPolls);
         }
@@ -131,11 +140,17 @@ function fetchSpockPolls(network) {
     return __awaiter(this, void 0, void 0, function* () {
         const res = yield axios_1.default.post(constants_1.POLLING_DB_URLS[network], { operationName: 'activePolls' });
         const spockPollsData = res.data.data.activePolls.edges
-            .map(({ node: { pollId, url, multiHash } }) => ({ pollId, url, multiHash }))
+            .map(({ node: { pollId, url, multiHash, startDate, endDate } }) => ({
+            pollId,
+            url,
+            multiHash,
+            startDate: new Date(startDate).toISOString(),
+            endDate: new Date(endDate).toISOString(),
+        }))
             // Removes duplicate entries
-            .reduce((acum, { pollId, url, multiHash }, i, pollArray) => {
-            if (i === pollArray.findIndex((p) => p.multiHash === multiHash)) {
-                acum.push({ pollId, url });
+            .reduce((acum, poll, i, pollArray) => {
+            if (i === pollArray.findIndex((p) => p.multiHash === poll.multiHash)) {
+                acum.push(Object.assign(Object.assign({}, poll), { slug: poll.multiHash.slice(0, 6) }));
             }
             return acum;
         }, []);
@@ -206,9 +221,8 @@ function run() {
             }
             const spockPolls = yield (0, fetchSpockPolls_1.default)(network);
             const pollsWithRawMetadata = yield (0, fetchGithubPolls_1.default)(spockPolls);
-            const polls = (0, parseGithubMetadata_1.parseGithubMetadata)(pollsWithRawMetadata, pollTagsFilePath);
-            console.log(JSON.stringify(polls, null, 2));
-            (0, fs_1.writeFileSync)(outputFilePath, JSON.stringify(polls, null, 2));
+            const pollListData = (0, parseGithubMetadata_1.parseGithubMetadata)(pollsWithRawMetadata, pollTagsFilePath);
+            (0, fs_1.writeFileSync)(outputFilePath, JSON.stringify(pollListData, null, 2));
         }
         catch (error) {
             if (error instanceof Error)
@@ -226,6 +240,17 @@ run();
 
 "use strict";
 
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -236,19 +261,19 @@ const constants_1 = __nccwpck_require__(5105);
 const fetchPollTags_1 = __nccwpck_require__(1553);
 function parseGithubMetadata(pollsWithRawMetadata, pollTagsFilePath) {
     const polls = pollsWithRawMetadata
-        .map(({ pollId, rawMetadata }) => {
+        .map((_a) => {
+        var { rawMetadata } = _a, poll = __rest(_a, ["rawMetadata"]);
         const { data: pollMetadata } = (0, gray_matter_1.default)(rawMetadata);
         const title = pollMetadata.title || '';
+        const summary = pollMetadata.summary || '';
+        const options = pollMetadata.options || {};
         const voteType = (pollMetadata === null || pollMetadata === void 0 ? void 0 : pollMetadata.vote_type) ||
             constants_1.POLL_VOTE_TYPE.UNKNOWN;
         const pollType = pollMetadata.parameters
             ? validatePollType(pollMetadata.parameters)
             : oldVoteTypeToNew(voteType);
-        return {
-            pollId,
-            title,
-            type: pollType,
-        };
+        return Object.assign(Object.assign({}, poll), { title,
+            summary, type: pollType, options });
     })
         .filter((poll) => poll.type);
     const pollsWithTags = (0, fetchPollTags_1.assignTags)(polls, pollTagsFilePath);

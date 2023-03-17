@@ -1,6 +1,6 @@
 import matter from 'gray-matter'
 
-import { PollMetadata, PollWithRawMetadata } from './polls'
+import { PollMetadata, PollOptions, PollWithRawMetadata } from './polls'
 import { PollVoteType } from './polls'
 import { POLL_VOTE_TYPE, PollInputFormat } from './constants'
 import { assignTags } from './fetchPollTags'
@@ -10,10 +10,12 @@ export function parseGithubMetadata(
   pollTagsFilePath: string
 ): PollMetadata[] {
   const polls = pollsWithRawMetadata
-    .map(({ pollId, rawMetadata }) => {
+    .map(({ rawMetadata, ...poll }) => {
       const { data: pollMetadata } = matter(rawMetadata)
 
       const title: string = pollMetadata.title || ''
+      const summary: string = pollMetadata.summary || ''
+      const options: PollOptions = pollMetadata.options || {}
       const voteType: PollVoteType =
         (pollMetadata as { vote_type: PollVoteType | null })?.vote_type ||
         POLL_VOTE_TYPE.UNKNOWN
@@ -23,9 +25,11 @@ export function parseGithubMetadata(
         : oldVoteTypeToNew(voteType)
 
       return {
-        pollId,
+        ...poll,
         title,
+        summary,
         type: pollType,
+        options,
       }
     })
     .filter((poll) => poll.type) as Omit<PollMetadata, 'tags'>[]
