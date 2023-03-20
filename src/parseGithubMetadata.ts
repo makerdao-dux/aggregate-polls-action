@@ -1,9 +1,18 @@
 import matter from 'gray-matter'
+import validUrl from 'valid-url'
 
-import { PollMetadata, PollOptions, PollWithRawMetadata } from './polls'
-import { PollVoteType } from './polls'
-import { POLL_VOTE_TYPE, PollInputFormat } from './constants'
+import {
+  PollMetadata,
+  PollOptions,
+  PollWithRawMetadata,
+  PollVoteType,
+} from './polls'
+import { POLL_VOTE_TYPE } from './constants'
 import { assignTags } from './fetchPollTags'
+import {
+  validatePollParameters,
+  oldVoteTypeToNewParameters,
+} from './validatePollParameters'
 
 export function parseGithubMetadata(
   pollsWithRawMetadata: PollWithRawMetadata[],
@@ -11,63 +20,61 @@ export function parseGithubMetadata(
 ): PollMetadata[] {
   const polls = pollsWithRawMetadata
     .map(({ rawMetadata, ...poll }) => {
-      const { data: pollMetadata } = matter(rawMetadata)
+      const { data: pollMetadata, content } = matter(rawMetadata)
 
-      const title: string = pollMetadata.title || ''
-      const summary: string = pollMetadata.summary || ''
-      const options: PollOptions = pollMetadata.options || {}
+      const title: string = pollMetadata?.title || ''
+      const summary: string = pollMetadata?.summary || ''
+      const options: PollOptions = pollMetadata?.options || {}
+      const discussionLink =
+        pollMetadata?.discussion_link &&
+        validUrl.isUri(pollMetadata.discussion_link)
+          ? pollMetadata.discussion_link
+          : null
+
+      // Parse old vote type
       const voteType: PollVoteType =
         (pollMetadata as { vote_type: PollVoteType | null })?.vote_type ||
         POLL_VOTE_TYPE.UNKNOWN
 
-      const pollType = pollMetadata.parameters
-        ? validatePollType(pollMetadata.parameters)
-        : oldVoteTypeToNew(voteType)
+      const [parameters, errorParameters] = pollMetadata.parameters
+        ? validatePollParameters(pollMetadata.parameters)
+        : oldVoteTypeToNewParameters(voteType)
+
+      if (errorParameters.length > 0 || !parameters) {
+        throw new Error(
+          `Invalid poll parameters for poll ${poll.pollId}. ${errorParameters}`
+        )
+      }
+
+      let startDate, endDate
+      //poll coming from poll create page
+      if (
+        new Date(poll.startDate).getTime() === 0 &&
+        new Date(poll.endDate).getTime() === 0
+      ) {
+        startDate = pollMetadata.start_date
+        endDate = pollMetadata.end_date
+      } else {
+        //poll coming from onchain
+        startDate = poll.startDate
+        endDate = poll.endDate
+      }
 
       return {
         ...poll,
+        startDate,
+        endDate,
         title,
         summary,
-        type: pollType,
+        discussionLink,
+        content,
         options,
+        parameters,
       }
     })
-    .filter((poll) => poll.type) as Omit<PollMetadata, 'tags'>[]
+    .filter((poll) => !!poll) as Omit<PollMetadata, 'tags'>[]
 
   const pollsWithTags = assignTags(polls, pollTagsFilePath)
 
   return pollsWithTags
-}
-
-const validatePollType = (
-  params: Record<string, unknown>
-): PollInputFormat | null => {
-  let inputFormatType = ''
-
-  if (typeof params.input_format === 'string') {
-    inputFormatType = params.input_format
-  } else {
-    inputFormatType = (params.input_format as any).type
-  }
-
-  if (
-    inputFormatType === PollInputFormat.rankFree ||
-    inputFormatType === PollInputFormat.singleChoice ||
-    inputFormatType === PollInputFormat.chooseFree
-  ) {
-    return inputFormatType
-  } else {
-    return null
-  }
-}
-
-const oldVoteTypeToNew = (voteType: PollVoteType): PollInputFormat => {
-  if (
-    voteType === POLL_VOTE_TYPE.PLURALITY_VOTE ||
-    voteType === POLL_VOTE_TYPE.UNKNOWN
-  ) {
-    return PollInputFormat.singleChoice
-  } else {
-    return PollInputFormat.rankFree
-  }
 }

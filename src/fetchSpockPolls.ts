@@ -11,13 +11,27 @@ export default async function fetchSpockPolls(
   )
 
   const spockPollsData = res.data.data.activePolls.edges
-    .map(({ node: { pollId, url, multiHash, startDate, endDate } }) => ({
-      pollId,
-      url,
-      multiHash,
-      startDate: new Date(startDate).toISOString(),
-      endDate: new Date(endDate).toISOString(),
-    }))
+    .map(
+      ({
+        node: {
+          creator,
+          pollId,
+          blockCreated,
+          startDate,
+          endDate,
+          multiHash,
+          url,
+        },
+      }) => ({
+        creator,
+        pollId,
+        blockCreated,
+        startDate: new Date(startDate * 1000).toISOString(),
+        endDate: new Date(endDate * 1000).toISOString(),
+        multiHash,
+        url,
+      })
+    )
     // Removes duplicate entries
     .reduce((acum, poll, i, pollArray) => {
       if (i === pollArray.findIndex((p) => p.multiHash === poll.multiHash)) {
