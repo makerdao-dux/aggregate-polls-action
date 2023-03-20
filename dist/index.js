@@ -7,18 +7,12 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.POLLING_DB_URLS = exports.POLL_VOTE_TYPE = exports.PollInputFormat = exports.SupportedNetworks = void 0;
+exports.ERRORS_VALIDATE_POLL_PARAMETERS = exports.PollResultDisplay = exports.PollVictoryConditions = exports.PollInputFormat = exports.POLLING_DB_URLS = exports.POLL_VOTE_TYPE = exports.SupportedNetworks = void 0;
 var SupportedNetworks;
 (function (SupportedNetworks) {
     SupportedNetworks["mainnet"] = "mainnet";
     SupportedNetworks["goerli"] = "goerli";
 })(SupportedNetworks = exports.SupportedNetworks || (exports.SupportedNetworks = {}));
-var PollInputFormat;
-(function (PollInputFormat) {
-    PollInputFormat["singleChoice"] = "single-choice";
-    PollInputFormat["rankFree"] = "rank-free";
-    PollInputFormat["chooseFree"] = "choose-free";
-})(PollInputFormat = exports.PollInputFormat || (exports.PollInputFormat = {}));
 exports.POLL_VOTE_TYPE = {
     PLURALITY_VOTE: 'Plurality Voting',
     RANKED_VOTE: 'Ranked Choice IRV',
@@ -27,6 +21,52 @@ exports.POLL_VOTE_TYPE = {
 exports.POLLING_DB_URLS = {
     [SupportedNetworks.mainnet]: 'https://pollingdb2-mainnet-prod.makerdux.com/api/v1',
     [SupportedNetworks.goerli]: 'https://pollingdb2-goerli-staging.makerdux.com/api/v1',
+};
+// Poll parameters
+var PollInputFormat;
+(function (PollInputFormat) {
+    PollInputFormat["singleChoice"] = "single-choice";
+    PollInputFormat["rankFree"] = "rank-free";
+    PollInputFormat["chooseFree"] = "choose-free";
+})(PollInputFormat = exports.PollInputFormat || (exports.PollInputFormat = {}));
+var PollVictoryConditions;
+(function (PollVictoryConditions) {
+    PollVictoryConditions["and"] = "and";
+    PollVictoryConditions["majority"] = "majority";
+    PollVictoryConditions["approval"] = "approval";
+    PollVictoryConditions["plurality"] = "plurality";
+    PollVictoryConditions["instantRunoff"] = "instant-runoff";
+    PollVictoryConditions["default"] = "default";
+    PollVictoryConditions["comparison"] = "comparison";
+})(PollVictoryConditions = exports.PollVictoryConditions || (exports.PollVictoryConditions = {}));
+var PollResultDisplay;
+(function (PollResultDisplay) {
+    PollResultDisplay["singleVoteBreakdown"] = "single-vote-breakdown";
+    PollResultDisplay["instantRunoffBreakdown"] = "instant-runoff-breakdown";
+    PollResultDisplay["approvalBreakdown"] = "approval-breakdown";
+})(PollResultDisplay = exports.PollResultDisplay || (exports.PollResultDisplay = {}));
+exports.ERRORS_VALIDATE_POLL_PARAMETERS = {
+    missingInputFormat: 'Missing input_format on poll parameters',
+    invalidInputFormat: 'Invalid input_format. Supported values are rank-free, choose-free and single-choice',
+    missingVictoryConditions: 'Missing victory_conditions',
+    victoryConditionsNotArray: 'victory_conditions should be an array of victory conditions',
+    invalidVictoryConditions: 'victory_conditions should be objects',
+    victoryConditionsNotValid: 'victory_conditions must include a valid condition. Valid conditions are "plurality", "instant_runoff", "approval" or "majority"',
+    victoryConditionsInstantRunOffAndPluralityCanNotBeCombined: 'victory_conditions combination not valid. instant-runoff and plurality can not be combined together.',
+    victoryConditionsInstantRunOffAndMajoritynNotBeCombined: 'victory_conditions combination not valid. instant-runoff and majority can not be combined together.',
+    victoryConditionANDRequiresConditions: 'victory_condition AND requires inserting nested conditions',
+    victoryConditionDefaultRequiresDefaultValue: 'victory_condition default requires a value',
+    victoryConditionMajorityRequiresAPercentValue: 'victory_condition majority requires a percent',
+    victoryConditionComparisonRequiresValidComparator: 'victory_condition comparison requires a valid comparator (>, >=, =, <=, <).',
+    victoryConditionComparisonRequiresValidValue: 'victory_condition comparison requires a valid value',
+    instantRunoffRequiresRankFree: 'victory_condition instant-runoff requires input_format rank-free',
+    pluralityRequiresSingleChoice: 'victory_condition plurality requires input_format single-choice',
+    approvalRequiresChooseFree: 'victory_condition approval requires input_format choose-free',
+    // TODO: Include more result_displays when allowed
+    requiredResultDisplay: 'result_display is required. Available values are "instant-runoff-breakdown" or "single-vote-breakdown"',
+    singleChoiceRequiresSingleVoteBreakdownDisplay: 'input_format single-choice requires single-vote-breakdown result_display',
+    rankFreeRequiresInstantRunoffBreakdownDisplay: 'input_format rank-free requires instant-runoff-breakdown result_display',
+    approvalRequiresApprovalBreakdownDisplay: 'victory_condition approval requires approval-breakdown result_display',
 };
 
 
@@ -140,17 +180,19 @@ function fetchSpockPolls(network) {
     return __awaiter(this, void 0, void 0, function* () {
         const res = yield axios_1.default.post(constants_1.POLLING_DB_URLS[network], { operationName: 'activePolls' });
         const spockPollsData = res.data.data.activePolls.edges
-            .map(({ node: { pollId, url, multiHash, startDate, endDate } }) => ({
+            .map(({ node: { creator, pollId, blockCreated, startDate, endDate, multiHash, url, }, }) => ({
+            creator,
             pollId,
-            url,
+            blockCreated,
+            startDate: new Date(startDate * 1000).toISOString(),
+            endDate: new Date(endDate * 1000).toISOString(),
             multiHash,
-            startDate: new Date(startDate).toISOString(),
-            endDate: new Date(endDate).toISOString(),
+            url,
         }))
             // Removes duplicate entries
             .reduce((acum, poll, i, pollArray) => {
             if (i === pollArray.findIndex((p) => p.multiHash === poll.multiHash)) {
-                acum.push(Object.assign(Object.assign({}, poll), { slug: poll.multiHash.slice(0, 6) }));
+                acum.push(Object.assign(Object.assign({}, poll), { slug: poll.multiHash.slice(0, 8) }));
             }
             return acum;
         }, []);
@@ -221,8 +263,8 @@ function run() {
             }
             const spockPolls = yield (0, fetchSpockPolls_1.default)(network);
             const pollsWithRawMetadata = yield (0, fetchGithubPolls_1.default)(spockPolls);
-            const pollListData = (0, parseGithubMetadata_1.parseGithubMetadata)(pollsWithRawMetadata, pollTagsFilePath);
-            (0, fs_1.writeFileSync)(outputFilePath, JSON.stringify(pollListData, null, 2));
+            const polls = (0, parseGithubMetadata_1.parseGithubMetadata)(pollsWithRawMetadata, pollTagsFilePath);
+            (0, fs_1.writeFileSync)(outputFilePath, JSON.stringify(polls, null, 2));
         }
         catch (error) {
             if (error instanceof Error)
@@ -257,55 +299,345 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseGithubMetadata = void 0;
 const gray_matter_1 = __importDefault(__nccwpck_require__(5382));
+const valid_url_1 = __importDefault(__nccwpck_require__(349));
 const constants_1 = __nccwpck_require__(5105);
 const fetchPollTags_1 = __nccwpck_require__(1553);
+const validatePollParameters_1 = __nccwpck_require__(9401);
 function parseGithubMetadata(pollsWithRawMetadata, pollTagsFilePath) {
     const polls = pollsWithRawMetadata
         .map((_a) => {
         var { rawMetadata } = _a, poll = __rest(_a, ["rawMetadata"]);
-        const { data: pollMetadata } = (0, gray_matter_1.default)(rawMetadata);
-        const title = pollMetadata.title || '';
-        const summary = pollMetadata.summary || '';
-        const options = pollMetadata.options || {};
+        const { data: pollMetadata, content } = (0, gray_matter_1.default)(rawMetadata);
+        const title = (pollMetadata === null || pollMetadata === void 0 ? void 0 : pollMetadata.title) || '';
+        const summary = (pollMetadata === null || pollMetadata === void 0 ? void 0 : pollMetadata.summary) || '';
+        const options = (pollMetadata === null || pollMetadata === void 0 ? void 0 : pollMetadata.options) || {};
+        const discussionLink = (pollMetadata === null || pollMetadata === void 0 ? void 0 : pollMetadata.discussion_link) &&
+            valid_url_1.default.isUri(pollMetadata.discussion_link)
+            ? pollMetadata.discussion_link
+            : null;
+        // Parse old vote type
         const voteType = (pollMetadata === null || pollMetadata === void 0 ? void 0 : pollMetadata.vote_type) ||
             constants_1.POLL_VOTE_TYPE.UNKNOWN;
-        const pollType = pollMetadata.parameters
-            ? validatePollType(pollMetadata.parameters)
-            : oldVoteTypeToNew(voteType);
-        return Object.assign(Object.assign({}, poll), { title,
-            summary, type: pollType, options });
+        const [parameters, errorParameters] = pollMetadata.parameters
+            ? (0, validatePollParameters_1.validatePollParameters)(pollMetadata.parameters)
+            : (0, validatePollParameters_1.oldVoteTypeToNewParameters)(voteType);
+        if (errorParameters.length > 0 || !parameters) {
+            throw new Error(`Invalid poll parameters for poll ${poll.pollId}. ${errorParameters}`);
+        }
+        let startDate, endDate;
+        //poll coming from poll create page
+        if (new Date(poll.startDate).getTime() === 0 &&
+            new Date(poll.endDate).getTime() === 0) {
+            startDate = pollMetadata.start_date;
+            endDate = pollMetadata.end_date;
+        }
+        else {
+            //poll coming from onchain
+            startDate = poll.startDate;
+            endDate = poll.endDate;
+        }
+        return Object.assign(Object.assign({}, poll), { startDate,
+            endDate,
+            title,
+            summary,
+            discussionLink,
+            content,
+            options,
+            parameters });
     })
-        .filter((poll) => poll.type);
+        .filter((poll) => !!poll);
     const pollsWithTags = (0, fetchPollTags_1.assignTags)(polls, pollTagsFilePath);
+    console.log(pollsWithTags);
+    console.log(pollsWithTags[pollsWithTags.length - 1]);
     return pollsWithTags;
 }
 exports.parseGithubMetadata = parseGithubMetadata;
-const validatePollType = (params) => {
+
+
+/***/ }),
+
+/***/ 918:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.hasVictoryConditionComparison = exports.hasVictoryConditionDefault = exports.hasVictoryConditionAND = exports.hasVictoryConditionApproval = exports.hasVictoryConditionMajority = exports.hasVictoryConditionPlurality = exports.hasVictoryConditionInstantRunOff = exports.findVictoryCondition = void 0;
+const constants_1 = __nccwpck_require__(5105);
+// Generic function to determine if a victory condition exists in the nested array of victory conditions
+function findVictoryCondition(victoryConditions, victoryCondition) {
+    const found = [];
+    victoryConditions.forEach((v) => {
+        if (v.type === constants_1.PollVictoryConditions.and) {
+            if (victoryCondition === constants_1.PollVictoryConditions.and) {
+                found.push(v);
+                return;
+            }
+            ;
+            (v.conditions || []).forEach((i) => {
+                if (i.type === victoryCondition) {
+                    found.push(i);
+                    return;
+                }
+            });
+        }
+        if (v.type === victoryCondition) {
+            found.push(v);
+        }
+    });
+    return found;
+}
+exports.findVictoryCondition = findVictoryCondition;
+function hasVictoryConditionInstantRunOff(victoryConditions) {
+    return (findVictoryCondition(victoryConditions, constants_1.PollVictoryConditions.instantRunoff)
+        .length > 0);
+}
+exports.hasVictoryConditionInstantRunOff = hasVictoryConditionInstantRunOff;
+function hasVictoryConditionPlurality(victoryConditions) {
+    return (findVictoryCondition(victoryConditions, constants_1.PollVictoryConditions.plurality)
+        .length > 0);
+}
+exports.hasVictoryConditionPlurality = hasVictoryConditionPlurality;
+function hasVictoryConditionMajority(victoryConditions) {
+    return (findVictoryCondition(victoryConditions, constants_1.PollVictoryConditions.majority)
+        .length > 0);
+}
+exports.hasVictoryConditionMajority = hasVictoryConditionMajority;
+function hasVictoryConditionApproval(victoryConditions) {
+    return (findVictoryCondition(victoryConditions, constants_1.PollVictoryConditions.approval)
+        .length > 0);
+}
+exports.hasVictoryConditionApproval = hasVictoryConditionApproval;
+function hasVictoryConditionAND(victoryConditions) {
+    return (findVictoryCondition(victoryConditions, constants_1.PollVictoryConditions.and).length >
+        0);
+}
+exports.hasVictoryConditionAND = hasVictoryConditionAND;
+function hasVictoryConditionDefault(victoryConditions) {
+    return (findVictoryCondition(victoryConditions, constants_1.PollVictoryConditions.default)
+        .length > 0);
+}
+exports.hasVictoryConditionDefault = hasVictoryConditionDefault;
+function hasVictoryConditionComparison(victoryConditions) {
+    return (findVictoryCondition(victoryConditions, constants_1.PollVictoryConditions.comparison)
+        .length > 0);
+}
+exports.hasVictoryConditionComparison = hasVictoryConditionComparison;
+
+
+/***/ }),
+
+/***/ 9401:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.oldVoteTypeToNewParameters = exports.validatePollParameters = void 0;
+const constants_1 = __nccwpck_require__(5105);
+const utils_1 = __nccwpck_require__(918);
+function validatePollParameters(params) {
+    const errors = [];
     let inputFormatType = '';
-    if (typeof params.input_format === 'string') {
-        inputFormatType = params.input_format;
+    let inputFormatOptions = [];
+    let inputFormatAbstain = [0];
+    if (!params.input_format) {
+        errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.missingInputFormat);
     }
     else {
-        inputFormatType = params.input_format.type;
+        // Extract the input format type
+        if (typeof params.input_format === 'string') {
+            // if is an string, asume is the type, and use the default options
+            inputFormatType = params.input_format;
+        }
+        else {
+            inputFormatType = params.input_format.type;
+            inputFormatOptions =
+                params.input_format.options || inputFormatOptions;
+            inputFormatAbstain =
+                params.input_format.abstain || inputFormatAbstain;
+        }
+        if (inputFormatType !== constants_1.PollInputFormat.rankFree &&
+            inputFormatType !== constants_1.PollInputFormat.singleChoice &&
+            inputFormatType !== constants_1.PollInputFormat.chooseFree) {
+            errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.invalidInputFormat);
+        }
     }
-    if (inputFormatType === constants_1.PollInputFormat.rankFree ||
-        inputFormatType === constants_1.PollInputFormat.singleChoice ||
-        inputFormatType === constants_1.PollInputFormat.chooseFree) {
-        return inputFormatType;
+    if (!params.victory_conditions) {
+        errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.missingVictoryConditions);
+    }
+    else if (!Array.isArray(params.victory_conditions)) {
+        errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.victoryConditionsNotArray);
     }
     else {
-        return null;
+        const hasInstantRunOff = (0, utils_1.hasVictoryConditionInstantRunOff)(params.victory_conditions);
+        const hasPlurality = (0, utils_1.hasVictoryConditionPlurality)(params.victory_conditions);
+        const hasApproval = (0, utils_1.hasVictoryConditionApproval)(params.victory_conditions);
+        const hasMajority = (0, utils_1.hasVictoryConditionMajority)(params.victory_conditions);
+        const hasAND = (0, utils_1.hasVictoryConditionAND)(params.victory_conditions);
+        const hasDefault = (0, utils_1.hasVictoryConditionDefault)(params.victory_conditions);
+        const hasComparison = (0, utils_1.hasVictoryConditionComparison)(params.victory_conditions);
+        params.victory_conditions.forEach((v) => {
+            if (!v.type) {
+                errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.invalidVictoryConditions);
+            }
+            else if ([
+                constants_1.PollVictoryConditions.and,
+                constants_1.PollVictoryConditions.approval,
+                constants_1.PollVictoryConditions.comparison,
+                constants_1.PollVictoryConditions.default,
+                constants_1.PollVictoryConditions.instantRunoff,
+                constants_1.PollVictoryConditions.majority,
+                constants_1.PollVictoryConditions.plurality,
+            ].indexOf(v.type) === -1) {
+                errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.invalidVictoryConditions);
+            }
+        });
+        // Can not combine instant runoff and plurality
+        if (hasInstantRunOff && hasPlurality) {
+            errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.victoryConditionsInstantRunOffAndPluralityCanNotBeCombined);
+        }
+        // Can not combine instant runoff and majority
+        if (hasInstantRunOff && hasMajority) {
+            errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.victoryConditionsInstantRunOffAndMajoritynNotBeCombined);
+        }
+        // Rank free requires instant runoff condition
+        if (inputFormatType !== constants_1.PollInputFormat.rankFree && hasInstantRunOff) {
+            errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.instantRunoffRequiresRankFree);
+        }
+        // plurality requires requires single_choice
+        if (inputFormatType !== constants_1.PollInputFormat.singleChoice && hasPlurality) {
+            errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.pluralityRequiresSingleChoice);
+        }
+        // Approval requires input_format choose_free
+        if (inputFormatType !== constants_1.PollInputFormat.chooseFree && hasApproval) {
+            errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.approvalRequiresChooseFree);
+        }
+        // Validate that the AND victory condition has conditions inside
+        if (hasAND) {
+            const andConditions = (0, utils_1.findVictoryCondition)(params.victory_conditions, constants_1.PollVictoryConditions.and);
+            andConditions.forEach((condition) => {
+                var _a;
+                if (!condition.conditions || ((_a = condition.conditions) === null || _a === void 0 ? void 0 : _a.length) === 0) {
+                    errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.victoryConditionANDRequiresConditions);
+                }
+            });
+        }
+        // If it has default victory condition, the default has to have a value
+        if (hasDefault) {
+            const defaultConditions = (0, utils_1.findVictoryCondition)(params.victory_conditions, constants_1.PollVictoryConditions.default);
+            defaultConditions.forEach((condition) => {
+                if (typeof condition.value === 'undefined') {
+                    errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.victoryConditionDefaultRequiresDefaultValue);
+                }
+            });
+        }
+        // If it has a majority condition, check that the majority has a value
+        if (hasMajority) {
+            const majorityConditions = (0, utils_1.findVictoryCondition)(params.victory_conditions, constants_1.PollVictoryConditions.majority);
+            majorityConditions.forEach((condition) => {
+                if (typeof condition.percent === 'undefined') {
+                    errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.victoryConditionMajorityRequiresAPercentValue);
+                }
+            });
+        }
+        // If it has a comparision condition, check that the comparison has a comparator and a value
+        if (hasComparison) {
+            const comparisonConditions = (0, utils_1.findVictoryCondition)(params.victory_conditions, constants_1.PollVictoryConditions.comparison);
+            comparisonConditions.forEach((condition) => {
+                if (!condition.comparator ||
+                    ['>', '>=', '<=', '=', '<'].indexOf(condition.comparator) === -1) {
+                    errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.victoryConditionComparisonRequiresValidComparator);
+                }
+                if (!condition.value || typeof condition.value !== 'number') {
+                    errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.victoryConditionComparisonRequiresValidValue);
+                }
+            });
+        }
     }
-};
-const oldVoteTypeToNew = (voteType) => {
+    // Validate result display
+    if (!params.result_display) {
+        errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.requiredResultDisplay);
+    }
+    else {
+        // input_format single-choice requires single-vote-breakdown result_display
+        if (inputFormatType === constants_1.PollInputFormat.singleChoice &&
+            params.result_display !== constants_1.PollResultDisplay.singleVoteBreakdown) {
+            errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.singleChoiceRequiresSingleVoteBreakdownDisplay);
+        }
+        // input_format rank-free requires instant-runoff-breakdown result_display
+        if (inputFormatType === constants_1.PollInputFormat.rankFree &&
+            params.result_display !== constants_1.PollResultDisplay.instantRunoffBreakdown) {
+            errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.rankFreeRequiresInstantRunoffBreakdownDisplay);
+        }
+        // Approval requires approval-breakdown result_display
+        if ((0, utils_1.hasVictoryConditionApproval)(params.victory_conditions) &&
+            params.result_display !== constants_1.PollResultDisplay.approvalBreakdown) {
+            errors.push(constants_1.ERRORS_VALIDATE_POLL_PARAMETERS.approvalRequiresApprovalBreakdownDisplay);
+        }
+    }
+    // There are errors, return a empty object and the list of errors
+    if (errors.length > 0) {
+        return [null, errors];
+    }
+    else {
+        // Correct object
+        return [
+            {
+                inputFormat: {
+                    type: inputFormatType,
+                    abstain: inputFormatAbstain,
+                    options: inputFormatOptions,
+                },
+                resultDisplay: params.result_display,
+                victoryConditions: params.victory_conditions,
+            },
+            [],
+        ];
+    }
+}
+exports.validatePollParameters = validatePollParameters;
+// Formats old vote types to new poll parameters
+function oldVoteTypeToNewParameters(voteType) {
     if (voteType === constants_1.POLL_VOTE_TYPE.PLURALITY_VOTE ||
         voteType === constants_1.POLL_VOTE_TYPE.UNKNOWN) {
-        return constants_1.PollInputFormat.singleChoice;
+        return [
+            {
+                inputFormat: {
+                    type: constants_1.PollInputFormat.singleChoice,
+                    abstain: [0],
+                    options: [],
+                },
+                resultDisplay: constants_1.PollResultDisplay.singleVoteBreakdown,
+                victoryConditions: [
+                    {
+                        type: constants_1.PollVictoryConditions.plurality,
+                    },
+                ],
+            },
+            [],
+        ];
     }
     else {
-        return constants_1.PollInputFormat.rankFree;
+        return [
+            {
+                inputFormat: {
+                    type: constants_1.PollInputFormat.rankFree,
+                    abstain: [0],
+                    options: [],
+                },
+                resultDisplay: constants_1.PollResultDisplay.instantRunoffBreakdown,
+                victoryConditions: [
+                    {
+                        type: constants_1.PollVictoryConditions.instantRunoff,
+                    },
+                ],
+            },
+            [],
+        ];
     }
-};
+}
+exports.oldVoteTypeToNewParameters = oldVoteTypeToNewParameters;
 
 
 /***/ }),
@@ -11604,6 +11936,167 @@ exports["default"] = _default;
 
 /***/ }),
 
+/***/ 349:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/* module decorator */ module = __nccwpck_require__.nmd(module);
+(function(module) {
+    'use strict';
+
+    module.exports.is_uri = is_iri;
+    module.exports.is_http_uri = is_http_iri;
+    module.exports.is_https_uri = is_https_iri;
+    module.exports.is_web_uri = is_web_iri;
+    // Create aliases
+    module.exports.isUri = is_iri;
+    module.exports.isHttpUri = is_http_iri;
+    module.exports.isHttpsUri = is_https_iri;
+    module.exports.isWebUri = is_web_iri;
+
+
+    // private function
+    // internal URI spitter method - direct from RFC 3986
+    var splitUri = function(uri) {
+        var splitted = uri.match(/(?:([^:\/?#]+):)?(?:\/\/([^\/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?/);
+        return splitted;
+    };
+
+    function is_iri(value) {
+        if (!value) {
+            return;
+        }
+
+        // check for illegal characters
+        if (/[^a-z0-9\:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,\;\=\.\-\_\~\%]/i.test(value)) return;
+
+        // check for hex escapes that aren't complete
+        if (/%[^0-9a-f]/i.test(value)) return;
+        if (/%[0-9a-f](:?[^0-9a-f]|$)/i.test(value)) return;
+
+        var splitted = [];
+        var scheme = '';
+        var authority = '';
+        var path = '';
+        var query = '';
+        var fragment = '';
+        var out = '';
+
+        // from RFC 3986
+        splitted = splitUri(value);
+        scheme = splitted[1]; 
+        authority = splitted[2];
+        path = splitted[3];
+        query = splitted[4];
+        fragment = splitted[5];
+
+        // scheme and path are required, though the path can be empty
+        if (!(scheme && scheme.length && path.length >= 0)) return;
+
+        // if authority is present, the path must be empty or begin with a /
+        if (authority && authority.length) {
+            if (!(path.length === 0 || /^\//.test(path))) return;
+        } else {
+            // if authority is not present, the path must not start with //
+            if (/^\/\//.test(path)) return;
+        }
+
+        // scheme must begin with a letter, then consist of letters, digits, +, ., or -
+        if (!/^[a-z][a-z0-9\+\-\.]*$/.test(scheme.toLowerCase()))  return;
+
+        // re-assemble the URL per section 5.3 in RFC 3986
+        out += scheme + ':';
+        if (authority && authority.length) {
+            out += '//' + authority;
+        }
+
+        out += path;
+
+        if (query && query.length) {
+            out += '?' + query;
+        }
+
+        if (fragment && fragment.length) {
+            out += '#' + fragment;
+        }
+
+        return out;
+    }
+
+    function is_http_iri(value, allowHttps) {
+        if (!is_iri(value)) {
+            return;
+        }
+
+        var splitted = [];
+        var scheme = '';
+        var authority = '';
+        var path = '';
+        var port = '';
+        var query = '';
+        var fragment = '';
+        var out = '';
+
+        // from RFC 3986
+        splitted = splitUri(value);
+        scheme = splitted[1]; 
+        authority = splitted[2];
+        path = splitted[3];
+        query = splitted[4];
+        fragment = splitted[5];
+
+        if (!scheme)  return;
+
+        if(allowHttps) {
+            if (scheme.toLowerCase() != 'https') return;
+        } else {
+            if (scheme.toLowerCase() != 'http') return;
+        }
+
+        // fully-qualified URIs must have an authority section that is
+        // a valid host
+        if (!authority) {
+            return;
+        }
+
+        // enable port component
+        if (/:(\d+)$/.test(authority)) {
+            port = authority.match(/:(\d+)$/)[0];
+            authority = authority.replace(/:\d+$/, '');
+        }
+
+        out += scheme + ':';
+        out += '//' + authority;
+        
+        if (port) {
+            out += port;
+        }
+        
+        out += path;
+        
+        if(query && query.length){
+            out += '?' + query;
+        }
+
+        if(fragment && fragment.length){
+            out += '#' + fragment;
+        }
+        
+        return out;
+    }
+
+    function is_https_iri(value) {
+        return is_http_iri(value, true);
+    }
+
+    function is_web_iri(value) {
+        return (is_http_iri(value) || is_https_iri(value));
+    }
+
+})(module);
+
+
+/***/ }),
+
 /***/ 9491:
 /***/ ((module) => {
 
@@ -15944,8 +16437,8 @@ module.exports = JSON.parse('{"application/1d-interleaved-parityfec":{"source":"
 /******/ 		}
 /******/ 		// Create a new module (and put it into the cache)
 /******/ 		var module = __webpack_module_cache__[moduleId] = {
-/******/ 			// no module.id needed
-/******/ 			// no module.loaded needed
+/******/ 			id: moduleId,
+/******/ 			loaded: false,
 /******/ 			exports: {}
 /******/ 		};
 /******/ 	
@@ -15958,11 +16451,23 @@ module.exports = JSON.parse('{"application/1d-interleaved-parityfec":{"source":"
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
 /******/ 		}
 /******/ 	
+/******/ 		// Flag the module as loaded
+/******/ 		module.loaded = true;
+/******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/node module decorator */
+/******/ 	(() => {
+/******/ 		__nccwpck_require__.nmd = (module) => {
+/******/ 			module.paths = [];
+/******/ 			if (!module.children) module.children = [];
+/******/ 			return module;
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
