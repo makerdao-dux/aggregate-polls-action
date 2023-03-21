@@ -104,10 +104,10 @@ type PollParameters = {
 export type PollMetadata = ParsedSpockPoll & {
   title: string
   summary: string
+  discussionLink: string
   content: string
   options: PollOptions
-  // parameters: ?????
-  discussionLink: string
+  parameters: PollParameters
   tags: string[]
 }
 

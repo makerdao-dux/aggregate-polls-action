@@ -234,6 +234,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
+const crypto_1 = __nccwpck_require__(6113);
 const fs_1 = __nccwpck_require__(7147);
 const constants_1 = __nccwpck_require__(5105);
 const fetchGithubPolls_1 = __importDefault(__nccwpck_require__(4238));
@@ -245,6 +246,7 @@ function run() {
             const pollTagsFilePath = core.getInput('tags-file');
             const network = core.getInput('network');
             const outputFilePath = core.getInput('output-file');
+            const hashFilePath = core.getInput('hash-file');
             if (network !== constants_1.SupportedNetworks.mainnet &&
                 network !== constants_1.SupportedNetworks.goerli) {
                 throw new Error('Unsupported network input parameter');
@@ -252,8 +254,10 @@ function run() {
             const spockPolls = yield (0, fetchSpockPolls_1.default)(network);
             const pollsWithRawMetadata = yield (0, fetchGithubPolls_1.default)(spockPolls);
             const polls = (0, parseGithubMetadata_1.parseGithubMetadata)(pollsWithRawMetadata, pollTagsFilePath);
-            // CHECK MISSING URL
-            (0, fs_1.writeFileSync)(outputFilePath, JSON.stringify(polls, null, 2));
+            const stringPolls = JSON.stringify(polls, null, 2);
+            const hashedPolls = (0, crypto_1.createHash)('sha256').update(stringPolls).digest('hex');
+            (0, fs_1.writeFileSync)(outputFilePath, stringPolls);
+            (0, fs_1.writeFileSync)(hashFilePath, hashedPolls);
         }
         catch (error) {
             if (error instanceof Error)

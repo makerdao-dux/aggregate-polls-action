@@ -16,3 +16,4 @@ jobs:
           network: 'mainnet'
           tags-file: '__tests__/polls/poll-tags.json'
           output-file: '__tests__/polls/polls.json'
+          hash-file: '__tests__/polls/hashed-polls.json'
