@@ -86,17 +86,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -111,9 +100,8 @@ function fetchGithubPolls(parsedSpockPolls) {
             spockPollsInChunks.push(parsedSpockPolls.slice(i, i + chunkSize));
         }
         for (let j = 0; j < spockPollsInChunks.length; j++) {
-            const settledPolls = yield Promise.allSettled(spockPollsInChunks[j].map((_a) => __awaiter(this, void 0, void 0, function* () {
-                var { url } = _a, poll = __rest(_a, ["url"]);
-                const res = yield axios_1.default.get(url);
+            const settledPolls = yield Promise.allSettled(spockPollsInChunks[j].map((poll) => __awaiter(this, void 0, void 0, function* () {
+                const res = yield axios_1.default.get(poll.url);
                 return Object.assign(Object.assign({}, poll), { rawMetadata: res.data });
             })));
             pollsRes.push(...settledPolls);
@@ -264,6 +252,7 @@ function run() {
             const spockPolls = yield (0, fetchSpockPolls_1.default)(network);
             const pollsWithRawMetadata = yield (0, fetchGithubPolls_1.default)(spockPolls);
             const polls = (0, parseGithubMetadata_1.parseGithubMetadata)(pollsWithRawMetadata, pollTagsFilePath);
+            // CHECK MISSING URL
             (0, fs_1.writeFileSync)(outputFilePath, JSON.stringify(polls, null, 2));
         }
         catch (error) {
@@ -347,8 +336,6 @@ function parseGithubMetadata(pollsWithRawMetadata, pollTagsFilePath) {
     })
         .filter((poll) => !!poll);
     const pollsWithTags = (0, fetchPollTags_1.assignTags)(polls, pollTagsFilePath);
-    console.log(pollsWithTags);
-    console.log(pollsWithTags[pollsWithTags.length - 1]);
     return pollsWithTags;
 }
 exports.parseGithubMetadata = parseGithubMetadata;
