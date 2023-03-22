@@ -25,11 +25,14 @@ async function run(): Promise<void> {
     const pollsWithRawMetadata = await fetchGithubPolls(spockPolls)
     const polls = parseGithubMetadata(pollsWithRawMetadata, pollTagsFilePath)
 
-    const stringPolls = JSON.stringify(polls, null, 2)
-    const hashedPolls = createHash('sha256').update(stringPolls).digest('hex')
+    const pollsFile = JSON.stringify(polls, null, 2)
+    const aggregatedPollsHash = createHash('sha256')
+      .update(pollsFile)
+      .digest('hex')
+    const hashFile = JSON.stringify({ hash: aggregatedPollsHash }, null, 2)
 
-    writeFileSync(outputFilePath, stringPolls)
-    writeFileSync(hashFilePath, hashedPolls)
+    writeFileSync(outputFilePath, pollsFile)
+    writeFileSync(hashFilePath, hashFile)
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
