@@ -13,14 +13,18 @@ import {
   validatePollParameters,
   oldVoteTypeToNewParameters,
 } from './validatePollParameters'
+import { markdownToHtml } from './utils'
 
-export function parseGithubMetadata(
+export async function parseGithubMetadata(
   pollsWithRawMetadata: PollWithRawMetadata[],
   pollTagsFilePath: string
-): PollMetadata[] {
-  const polls = pollsWithRawMetadata
-    .map(({ rawMetadata, ...poll }) => {
-      const { data: pollMetadata, content } = matter(rawMetadata)
+): Promise<PollMetadata[]> {
+  const polls = await Promise.all(
+    pollsWithRawMetadata.map(async ({ rawMetadata, ...poll }) => {
+      const { data: pollMetadata, content: markdownContent } =
+        matter(rawMetadata)
+
+      const content = await markdownToHtml(markdownContent)
 
       const title: string = pollMetadata?.title || ''
       const summary: string = pollMetadata?.summary || ''
@@ -72,9 +76,14 @@ export function parseGithubMetadata(
         parameters,
       }
     })
-    .filter((poll) => !!poll) as Omit<PollMetadata, 'tags'>[]
+  )
 
-  const pollsWithTags = assignTags(polls, pollTagsFilePath)
+  const filteredPolls = polls.filter((poll) => !!poll) as Omit<
+    PollMetadata,
+    'tags'
+  >[]
+
+  const pollsWithTags = assignTags(filteredPolls, pollTagsFilePath)
 
   return pollsWithTags
 }

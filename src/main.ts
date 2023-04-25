@@ -23,7 +23,10 @@ async function run(): Promise<void> {
 
     const spockPolls = await fetchSpockPolls(network)
     const pollsWithRawMetadata = await fetchGithubPolls(spockPolls)
-    const polls = parseGithubMetadata(pollsWithRawMetadata, pollTagsFilePath)
+    const polls = await parseGithubMetadata(
+      pollsWithRawMetadata,
+      pollTagsFilePath
+    )
 
     const pollsFile = JSON.stringify(polls, null, 2)
     const aggregatedPollsHash = createHash('sha256')
