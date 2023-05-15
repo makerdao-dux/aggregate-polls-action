@@ -85,5 +85,5 @@ export async function parseGithubMetadata(
 
   const pollsWithTags = assignTags(filteredPolls, pollTagsFilePath)
 
-  return pollsWithTags
+  return pollsWithTags.sort((a, b) => a.pollId - b.pollId)
 }
