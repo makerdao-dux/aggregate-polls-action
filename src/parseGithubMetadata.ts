@@ -50,19 +50,7 @@ export async function parseGithubMetadata(
         )
       }
 
-      let startDate, endDate
-      //poll coming from poll create page
-      if (
-        new Date(poll.startDate).getTime() === 0 &&
-        new Date(poll.endDate).getTime() === 0
-      ) {
-        startDate = pollMetadata.start_date
-        endDate = pollMetadata.end_date
-      } else {
-        //poll coming from onchain
-        startDate = poll.startDate
-        endDate = poll.endDate
-      }
+      const { startDate, endDate } = poll
 
       return {
         ...poll,

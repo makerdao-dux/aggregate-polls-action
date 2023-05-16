@@ -27,7 +27,7 @@ This GitHub action fetches the poll metadata for each poll in the polling DB, pa
 ## Example usage
 
 ```yaml
-uses: makerdao-dux/aggregate-polls-action@v1.2.0
+uses: makerdao-dux/aggregate-polls-action@v1.2.4
 with:
   network: 'mainnet'
   tags-file: 'governance/polls/meta/poll-tags.json'
@@ -57,7 +57,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
       - name: Upload
         id: upload
-        uses: makerdao-dux/aggregate-polls-action@v1.2.0
+        uses: makerdao-dux/aggregate-polls-action@v1.2.4
         with:
           network: 'mainnet'
           tags-file: 'governance/polls/meta/poll-tags.json'
