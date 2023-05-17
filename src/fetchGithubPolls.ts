@@ -14,10 +14,10 @@ export default async function fetchGithubPolls(
 
   for (let j = 0; j < spockPollsInChunks.length; j++) {
     const settledPolls = await Promise.allSettled(
-      spockPollsInChunks[j].map(async ({ pollId, url }) => {
-        const res: AxiosResponse<string> = await axios.get(url)
+      spockPollsInChunks[j].map(async (poll) => {
+        const res: AxiosResponse<string> = await axios.get(poll.url)
         return {
-          pollId,
+          ...poll,
           rawMetadata: res.data,
         }
       })

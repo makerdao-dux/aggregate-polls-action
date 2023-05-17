@@ -12,6 +12,9 @@ inputs:
   output-file:
     description: 'Name of the aggregated file to be pushed to the repo'
     required: true
+  hash-file:
+    description: 'Name of the file containing the hash of the output-file'
+    required: true
 runs:
   using: 'node16'
   main: 'dist/index.js'

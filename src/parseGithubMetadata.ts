@@ -1,69 +1,77 @@
 import matter from 'gray-matter'
+import validUrl from 'valid-url'
 
-import { PollMetadata, PollWithRawMetadata } from './polls'
-import { PollVoteType } from './polls'
-import { POLL_VOTE_TYPE, PollInputFormat } from './constants'
+import {
+  PollMetadata,
+  PollOptions,
+  PollWithRawMetadata,
+  PollVoteType,
+} from './polls'
+import { POLL_VOTE_TYPE } from './constants'
 import { assignTags } from './fetchPollTags'
+import {
+  validatePollParameters,
+  oldVoteTypeToNewParameters,
+} from './validatePollParameters'
+import { markdownToHtml } from './utils'
 
-export function parseGithubMetadata(
+export async function parseGithubMetadata(
   pollsWithRawMetadata: PollWithRawMetadata[],
   pollTagsFilePath: string
-): PollMetadata[] {
-  const polls = pollsWithRawMetadata
-    .map(({ pollId, rawMetadata }) => {
-      const { data: pollMetadata } = matter(rawMetadata)
+): Promise<PollMetadata[]> {
+  const polls = await Promise.all(
+    pollsWithRawMetadata.map(async ({ rawMetadata, ...poll }) => {
+      const { data: pollMetadata, content: markdownContent } =
+        matter(rawMetadata)
 
-      const title: string = pollMetadata.title || ''
+      const content = await markdownToHtml(markdownContent)
+
+      const title: string = pollMetadata?.title || ''
+      const summary: string = pollMetadata?.summary || ''
+      const options: PollOptions = pollMetadata?.options || {}
+      const discussionLink =
+        pollMetadata?.discussion_link &&
+        validUrl.isUri(pollMetadata.discussion_link)
+          ? pollMetadata.discussion_link
+          : null
+
+      // Parse old vote type
       const voteType: PollVoteType =
         (pollMetadata as { vote_type: PollVoteType | null })?.vote_type ||
         POLL_VOTE_TYPE.UNKNOWN
 
-      const pollType = pollMetadata.parameters
-        ? validatePollType(pollMetadata.parameters)
-        : oldVoteTypeToNew(voteType)
+      const [parameters, errorParameters] = pollMetadata.parameters
+        ? validatePollParameters(pollMetadata.parameters)
+        : oldVoteTypeToNewParameters(voteType)
+
+      if (errorParameters.length > 0 || !parameters) {
+        throw new Error(
+          `Invalid poll parameters for poll ${poll.pollId}. ${errorParameters}`
+        )
+      }
+
+      const { startDate, endDate } = poll
 
       return {
-        pollId,
+        ...poll,
+        startDate,
+        endDate,
         title,
-        type: pollType,
+        summary,
+        discussionLink,
+        content,
+        options,
+        parameters,
       }
     })
-    .filter((poll) => poll.type) as Omit<PollMetadata, 'tags'>[]
+  )
 
-  const pollsWithTags = assignTags(polls, pollTagsFilePath)
+  const filteredPolls = polls.filter((poll) => !!poll) as Omit<
+    PollMetadata,
+    'tags'
+  >[]
 
-  return pollsWithTags
-}
+  const pollsWithTags = assignTags(filteredPolls, pollTagsFilePath)
 
-const validatePollType = (
-  params: Record<string, unknown>
-): PollInputFormat | null => {
-  let inputFormatType = ''
-
-  if (typeof params.input_format === 'string') {
-    inputFormatType = params.input_format
-  } else {
-    inputFormatType = (params.input_format as any).type
-  }
-
-  if (
-    inputFormatType === PollInputFormat.rankFree ||
-    inputFormatType === PollInputFormat.singleChoice ||
-    inputFormatType === PollInputFormat.chooseFree
-  ) {
-    return inputFormatType
-  } else {
-    return null
-  }
-}
-
-const oldVoteTypeToNew = (voteType: PollVoteType): PollInputFormat => {
-  if (
-    voteType === POLL_VOTE_TYPE.PLURALITY_VOTE ||
-    voteType === POLL_VOTE_TYPE.UNKNOWN
-  ) {
-    return PollInputFormat.singleChoice
-  } else {
-    return PollInputFormat.rankFree
-  }
+  return pollsWithTags.sort((a, b) => a.pollId - b.pollId)
 }

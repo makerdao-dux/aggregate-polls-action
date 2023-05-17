@@ -4,7 +4,7 @@
 
 # Aggregate Poll Action
 
-This GitHub action fetches the poll metadata for each poll in the polling DB, extracts the title and poll type, assigns the corresponding tags to each poll, and finally aggregates all of the polls into a single file, writing it to the disk.
+This GitHub action fetches the poll metadata for each poll in the polling DB, parses it, assigns the corresponding tags to each poll, and finally aggregates all of the polls into a single file, writing it to the disk.
 
 ## Inputs
 
@@ -20,17 +20,22 @@ This GitHub action fetches the poll metadata for each poll in the polling DB, ex
 
 **Required** The path and name of the file that will be created containing the aggregated list of polls.
 
+### `hash-file`
+
+**Required** The path and name of the file that will be created containing the hash of the file with the aggregated list of polls.
+
 ## Example usage
 
 ```yaml
-uses: makerdao-dux/aggregate-polls-action@v1.1.2
+uses: makerdao-dux/aggregate-polls-action@v1.2.4
 with:
-  network: "mainnet"
-  tags-file: "governance/polls/meta/poll-tags.json"
-  output-file: "governance/polls/meta/polls.json"
+  network: 'mainnet'
+  tags-file: 'governance/polls/meta/poll-tags.json'
+  output-file: 'governance/polls/meta/polls.json'
+  hash-file: 'governance/polls/meta/hashed-polls.json'
 ```
 
-### Full example: 
+### Full example:
 
 ```yaml
 name: 'Aggregate Polls'
@@ -52,12 +57,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
       - name: Upload
         id: upload
-        uses: makerdao-dux/aggregate-polls-action@v1.1.2
+        uses: makerdao-dux/aggregate-polls-action@v1.2.4
         with:
           network: 'mainnet'
           tags-file: 'governance/polls/meta/poll-tags.json'
           output-file: 'governance/polls/meta/polls.json'
-      - name: Update pull request with polls changes 
+          hash-file: 'governance/polls/meta/hashed-polls.json'
+      - name: Update pull request with polls changes
         uses: EndBug/add-and-commit@v9
         with:
           author_name: github-actions[bot]
@@ -71,5 +77,6 @@ jobs:
 ```
 
 Based on:
+
 - https://github.com/actions/typescript-action
 - https://docs.github.com/en/actions/creating-actions/creating-a-javascript-action
