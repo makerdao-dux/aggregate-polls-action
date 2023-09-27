@@ -21,8 +21,23 @@ export async function parseGithubMetadata(
 ): Promise<PollMetadata[]> {
   const polls = await Promise.all(
     pollsWithRawMetadata.map(async ({ rawMetadata, ...poll }) => {
-      const { data: pollMetadata, content: markdownContent } =
-        matter(rawMetadata)
+      const { data: pollMetadata, content: markdownContent } = matter(
+        rawMetadata,
+        {
+          engines: {
+            javascript: {
+              parse: function () {
+                console.log('Parsing JavaScript is not allowed')
+                return {}
+              },
+              stringify: function () {
+                console.log('Stringifying JavaScript is not allowed')
+                return ''
+              },
+            },
+          },
+        }
+      )
 
       const content = await markdownToHtml(markdownContent)
 
