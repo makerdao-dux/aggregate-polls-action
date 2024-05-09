@@ -2,7 +2,7 @@ import { PollVoteType } from './polls'
 
 export enum SupportedNetworks {
   mainnet = 'mainnet',
-  goerli = 'goerli',
+  tenderly = 'tenderly',
 }
 
 export const POLL_VOTE_TYPE = {
@@ -14,8 +14,8 @@ export const POLL_VOTE_TYPE = {
 export const POLLING_DB_URLS = {
   [SupportedNetworks.mainnet]:
     'https://pollingdb2-mainnet-prod.makerdux.com/api/v1',
-  [SupportedNetworks.goerli]:
-    'https://pollingdb2-goerli-staging.makerdux.com/api/v1',
+  [SupportedNetworks.tenderly]:
+    'https://pollingdb2-tenderly-staging.makerdux.com/api/v1',
 }
 
 // Poll parameters

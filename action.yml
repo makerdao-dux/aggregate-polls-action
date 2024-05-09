@@ -2,7 +2,7 @@ name: 'Aggregate Polls Data'
 description: 'Aggregates all polls ID, title, type and tags into a single JSON file'
 inputs:
   network:
-    description: 'The network the polls are from, either mainnet or goerli'
+    description: 'The network the polls are from, either mainnet or tenderly'
     required: true
     default: 'mainnet'
   tags-file:

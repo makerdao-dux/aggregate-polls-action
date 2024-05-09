@@ -10,7 +10,7 @@ This GitHub action fetches the poll metadata for each poll in the polling DB, pa
 
 ### `network`
 
-**Required** The network from which to fetch polls from, either Mainnet or Goerli. Default: `mainnet`.
+**Required** The network from which to fetch polls from, either Mainnet or Tenderly. Default: `mainnet`.
 
 ### `tags-file`
 

@@ -16,7 +16,7 @@ async function run(): Promise<void> {
 
     if (
       network !== SupportedNetworks.mainnet &&
-      network !== SupportedNetworks.goerli
+      network !== SupportedNetworks.tenderly
     ) {
       throw new Error('Unsupported network input parameter')
     }
