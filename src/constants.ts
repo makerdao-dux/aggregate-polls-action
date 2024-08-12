@@ -1,4 +1,4 @@
-import { PollVoteType } from './polls'
+import { PollVoteType } from './polls';
 
 export enum SupportedNetworks {
   mainnet = 'mainnet',
@@ -9,14 +9,14 @@ export const POLL_VOTE_TYPE = {
   PLURALITY_VOTE: 'Plurality Voting' as PollVoteType,
   RANKED_VOTE: 'Ranked Choice IRV' as PollVoteType,
   UNKNOWN: 'Unknown' as PollVoteType,
-}
+};
 
 export const POLLING_DB_URLS = {
   [SupportedNetworks.mainnet]:
-    'https://pollingdb2-mainnet-prod.makerdux.com/api/v1',
+    'https://pollingdb2-mainnet-prod.makerdao.com/api/v1',
   [SupportedNetworks.tenderly]:
-    'https://pollingdb2-tenderly-staging.makerdux.com/api/v1',
-}
+    'https://pollingdb2-tenderly-staging.makerdao.com/api/v1',
+};
 
 // Poll parameters
 export enum PollInputFormat {
@@ -80,4 +80,4 @@ export const ERRORS_VALIDATE_POLL_PARAMETERS = {
     'input_format rank-free requires instant-runoff-breakdown result_display',
   approvalRequiresApprovalBreakdownDisplay:
     'victory_condition approval requires approval-breakdown result_display',
-}
+};
