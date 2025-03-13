@@ -3,9 +3,9 @@ import fetchSpockPolls from '../src/fetchSpockPolls'
 import fetchGithubPolls from '../src/fetchGithubPolls'
 import { parseGithubMetadata } from '../src/parseGithubMetadata'
 import { SupportedNetworks, PollInputFormat } from '../src/constants'
-import { ParsedSpockPoll, PollWithRawMetadata } from '../src/polls'
+import { ParsedSubgraphPoll, PollWithRawMetadata } from '../src/polls'
 
-const testSpockPolls: ParsedSpockPoll[] = [
+const testSpockPolls: ParsedSubgraphPoll[] = [
   {
     pollId: 1,
     url: 'https://raw.githubusercontent.com/makerdao/community/master/governance/polls/Activate%20Liquidations%20for%20Stablecoin%20Vaults%20to%20Clear%20Bad%20Debt%20-%20October%2031%2C%202022.md',
@@ -83,32 +83,32 @@ const pollTagsFilePath = '__tests__/polls/poll-tags.json'
 
 describe('Polling module', () => {
   test('Fetch spock polls', async () => {
-    const spockPolls = await fetchSpockPolls(SupportedNetworks.mainnet)
+    const subgraphPolls = await fetchSpockPolls(SupportedNetworks.mainnet)
 
-    expect(spockPolls.length).toBeGreaterThan(0)
-    expect(spockPolls[0].pollId).toBeDefined()
-    expect(typeof spockPolls[0].pollId).toBe('number')
-    expect(spockPolls[0].url).toBeDefined()
-    expect(typeof spockPolls[0].url).toBe('string')
-    expect(spockPolls[0].slug).toBeDefined()
-    expect(typeof spockPolls[0].slug).toBe('string')
-    expect(spockPolls[0].slug).toHaveLength(8)
-    expect(spockPolls[0].startDate).toBeDefined()
-    expect(typeof spockPolls[0].startDate).toBe('string')
-    expect(typeof new Date(spockPolls[0].startDate).toISOString()).toBe(
+    expect(subgraphPolls.length).toBeGreaterThan(0)
+    expect(subgraphPolls[0].pollId).toBeDefined()
+    expect(typeof subgraphPolls[0].pollId).toBe('number')
+    expect(subgraphPolls[0].url).toBeDefined()
+    expect(typeof subgraphPolls[0].url).toBe('string')
+    expect(subgraphPolls[0].slug).toBeDefined()
+    expect(typeof subgraphPolls[0].slug).toBe('string')
+    expect(subgraphPolls[0].slug).toHaveLength(8)
+    expect(subgraphPolls[0].startDate).toBeDefined()
+    expect(typeof subgraphPolls[0].startDate).toBe('string')
+    expect(typeof new Date(subgraphPolls[0].startDate).toISOString()).toBe(
       'string'
     )
-    expect(spockPolls[0].endDate).toBeDefined()
-    expect(typeof spockPolls[0].endDate).toBe('string')
-    expect(typeof new Date(spockPolls[0].endDate).toISOString()).toBe('string')
-    expect(spockPolls[0].multiHash).toBeDefined()
-    expect(typeof spockPolls[0].multiHash).toBe('string')
-    expect(spockPolls[0].creator).toBeDefined()
-    expect(typeof spockPolls[0].creator).toBe('string')
-    expect(spockPolls[0].creator).toHaveLength(42)
-    expect(spockPolls[0].creator.startsWith('0x')).toBe(true)
-    expect(spockPolls[0].blockCreated).toBeDefined()
-    expect(typeof spockPolls[0].blockCreated).toBe('number')
+    expect(subgraphPolls[0].endDate).toBeDefined()
+    expect(typeof subgraphPolls[0].endDate).toBe('string')
+    expect(typeof new Date(subgraphPolls[0].endDate).toISOString()).toBe('string')
+    expect(subgraphPolls[0].multiHash).toBeDefined()
+    expect(typeof subgraphPolls[0].multiHash).toBe('string')
+    expect(subgraphPolls[0].creator).toBeDefined()
+    expect(typeof subgraphPolls[0].creator).toBe('string')
+    expect(subgraphPolls[0].creator).toHaveLength(42)
+    expect(subgraphPolls[0].creator.startsWith('0x')).toBe(true)
+    expect(subgraphPolls[0].blockCreated).toBeDefined()
+    expect(typeof subgraphPolls[0].blockCreated).toBe('number')
   })
 
   test('Fetch GitHub polls', async () => {
@@ -119,8 +119,8 @@ describe('Polling module', () => {
     expect(githubPolls[1].rawMetadata).toBe(testGithubPollMetadata)
   })
 
-  test('Parse GitHub metadata', () => {
-    const polls = parseGithubMetadata(testGithubPolls, pollTagsFilePath)
+  test('Parse GitHub metadata', async () => {
+    const polls = await parseGithubMetadata(testGithubPolls, pollTagsFilePath)
 
     expect(polls).toHaveLength(1)
     expect(polls[0].tags).toEqual(['misc-governance', 'mcd-launch'])

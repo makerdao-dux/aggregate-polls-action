@@ -4,26 +4,21 @@ import {
   PollResultDisplay,
 } from './constants'
 
-export type SpockPoll = {
-  data: {
-    activePolls: {
-      edges: {
-        node: {
+export type SubgraphPoll = {
+    data: {
+        polls: {
           creator: string
-          pollId: number
-          blockCreated: number
-          startDate: number
-          endDate: number
+          id: string
+          blockCreated: string
+          startDate: string
+          endDate: string
           multiHash: string
           url: string
-        }
-        cursor: string
-      }[]
-    }
+    }[]
   }
 }
 
-export type ParsedSpockPoll = {
+export type ParsedSubgraphPoll = {
   pollId: number
   url: string
   multiHash: string
@@ -34,7 +29,7 @@ export type ParsedSpockPoll = {
   blockCreated: number
 }
 
-export type PollWithRawMetadata = ParsedSpockPoll & {
+export type PollWithRawMetadata = ParsedSubgraphPoll & {
   rawMetadata: string
 }
 
@@ -101,7 +96,7 @@ type PollParameters = {
   resultDisplay: PollResultDisplay
 }
 
-export type PollMetadata = ParsedSpockPoll & {
+export type PollMetadata = ParsedSubgraphPoll & {
   title: string
   summary: string
   discussionLink: string

@@ -1,35 +1,47 @@
 import axios, { AxiosResponse } from 'axios'
-import { POLLING_DB_URLS, SupportedNetworks } from './constants'
-import { SpockPoll, ParsedSpockPoll } from './polls'
+import { SUBGRAPH_URLS, SupportedNetworks } from './constants'
+import { SubgraphPoll, ParsedSubgraphPoll } from './polls'
 
 export default async function fetchSpockPolls(
   network: SupportedNetworks
-): Promise<ParsedSpockPoll[]> {
-  const res: AxiosResponse<SpockPoll> = await axios.post(
-    POLLING_DB_URLS[network],
-    { operationName: 'activePolls' }
+): Promise<ParsedSubgraphPoll[]> {
+  const res: AxiosResponse<SubgraphPoll> = await axios.post(
+    SUBGRAPH_URLS[network],
+    {
+      query: `
+        {polls(orderBy: blockCreated, first: 100) {
+          id
+          creator
+          startDate
+          endDate
+          multiHash
+          url
+          blockCreated
+        }
+        }
+      `,
+      operationName: 'activePolls'
+    }
   )
 
-  const spockPollsData = res.data.data.activePolls.edges
+  const subgraphPollsData = res.data.data.polls
     .map(
       ({
-        node: {
           creator,
-          pollId,
-          blockCreated,
+          id,
           startDate,
           endDate,
           multiHash,
           url,
-        },
+          blockCreated
       }) => ({
         creator,
-        pollId,
-        blockCreated,
-        startDate: new Date(startDate * 1000).toISOString(),
-        endDate: new Date(endDate * 1000).toISOString(),
+        pollId: Number(id),
+        startDate: new Date(Number(startDate) * 1000).toISOString(),
+        endDate: new Date(Number(endDate) * 1000).toISOString(),
         multiHash,
         url,
+        blockCreated: Number(blockCreated)
       })
     )
     // Removes duplicate entries
@@ -42,7 +54,7 @@ export default async function fetchSpockPolls(
       }
 
       return acum
-    }, [] as ParsedSpockPoll[])
+    }, [] as ParsedSubgraphPoll[])
 
-  return spockPollsData
+  return subgraphPollsData
 }
