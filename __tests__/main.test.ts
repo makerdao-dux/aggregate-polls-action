@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals'
-import fetchSpockPolls from '../src/fetchSpockPolls'
+import fetchSpockPolls from '../src/fetchPolls'
 import fetchGithubPolls from '../src/fetchGithubPolls'
 import { parseGithubMetadata } from '../src/parseGithubMetadata'
 import { SupportedNetworks, PollInputFormat } from '../src/constants'
@@ -83,8 +83,37 @@ const pollTagsFilePath = '__tests__/polls/poll-tags.json'
 
 describe('Polling module', () => {
   test('Fetch spock polls', async () => {
-    const subgraphPolls = await fetchSpockPolls(SupportedNetworks.mainnet)
+    const spockPolls = await fetchSpockPolls(SupportedNetworks.mainnet)
 
+    expect(spockPolls.length).toBeGreaterThan(0)
+    expect(spockPolls[0].pollId).toBeDefined()
+    expect(typeof spockPolls[0].pollId).toBe('number')
+    expect(spockPolls[0].url).toBeDefined()
+    expect(typeof spockPolls[0].url).toBe('string')
+    expect(spockPolls[0].slug).toBeDefined()
+    expect(typeof spockPolls[0].slug).toBe('string')
+    expect(spockPolls[0].slug).toHaveLength(8)
+    expect(spockPolls[0].startDate).toBeDefined()
+    expect(typeof spockPolls[0].startDate).toBe('string')
+    expect(typeof new Date(spockPolls[0].startDate).toISOString()).toBe(
+      'string'
+    )
+    expect(spockPolls[0].endDate).toBeDefined()
+    expect(typeof spockPolls[0].endDate).toBe('string')
+    expect(typeof new Date(spockPolls[0].endDate).toISOString()).toBe('string')
+    expect(spockPolls[0].multiHash).toBeDefined()
+    expect(typeof spockPolls[0].multiHash).toBe('string')
+    expect(spockPolls[0].creator).toBeDefined()
+    expect(typeof spockPolls[0].creator).toBe('string')
+    expect(spockPolls[0].creator).toHaveLength(42)
+    expect(spockPolls[0].creator.startsWith('0x')).toBe(true)
+    expect(spockPolls[0].blockCreated).toBeDefined()
+    expect(typeof spockPolls[0].blockCreated).toBe('number')
+  })
+
+  test('Fetch subgraph polls', async () => {
+    const subgraphPolls = await fetchSpockPolls(SupportedNetworks.mainnet)
+    
     expect(subgraphPolls.length).toBeGreaterThan(0)
     expect(subgraphPolls[0].pollId).toBeDefined()
     expect(typeof subgraphPolls[0].pollId).toBe('number')

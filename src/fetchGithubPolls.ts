@@ -1,20 +1,20 @@
 import axios, { AxiosResponse } from 'axios'
-import { ParsedSubgraphPoll, PollWithRawMetadata } from './polls'
+import { ParsedPoll, PollWithRawMetadata } from './polls'
 
 export default async function fetchGithubPolls(
-  parsedSubgraphPolls: ParsedSubgraphPoll[]
+  parsedPolls: ParsedPoll[]
 ): Promise<PollWithRawMetadata[]> {
-  const subgraphPollsInChunks = []
+  const pollsInChunks = []
   const chunkSize = 20
   const pollsRes = []
 
-  for (let i = 0; i < parsedSubgraphPolls.length; i += chunkSize) {
-    subgraphPollsInChunks.push(parsedSubgraphPolls.slice(i, i + chunkSize))
+  for (let i = 0; i < parsedPolls.length; i += chunkSize) {
+    pollsInChunks.push(parsedPolls.slice(i, i + chunkSize))
   }
 
-  for (let j = 0; j < subgraphPollsInChunks.length; j++) {
+  for (let j = 0; j < pollsInChunks.length; j++) {
     const settledPolls = await Promise.allSettled(
-      subgraphPollsInChunks[j].map(async (poll) => {
+      pollsInChunks[j].map(async (poll) => {
         const res: AxiosResponse<string> = await axios.get(poll.url)
         return {
           ...poll,

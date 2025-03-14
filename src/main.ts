@@ -4,7 +4,7 @@ import { writeFileSync } from 'fs'
 
 import { SupportedNetworks } from './constants'
 import fetchGithubPolls from './fetchGithubPolls'
-import fetchSpockPolls from './fetchSpockPolls'
+import { fetchSpockPolls, fetchSubgraphPolls } from './fetchPolls'
 import { parseGithubMetadata } from './parseGithubMetadata'
 
 async function run(): Promise<void> {
@@ -21,8 +21,14 @@ async function run(): Promise<void> {
       throw new Error('Unsupported network input parameter')
     }
 
-    const spockPolls = await fetchSpockPolls(network)
-    const pollsWithRawMetadata = await fetchGithubPolls(spockPolls)
+    const [spockPolls, subgraphPolls] = await Promise.all([
+      fetchSpockPolls(network),
+      fetchSubgraphPolls(network)
+    ]);
+
+    const fetchedPolls = [...spockPolls, ...subgraphPolls]
+
+    const pollsWithRawMetadata = await fetchGithubPolls(fetchedPolls)
     const polls = await parseGithubMetadata(
       pollsWithRawMetadata,
       pollTagsFilePath
