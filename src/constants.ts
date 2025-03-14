@@ -11,7 +11,7 @@ export const POLL_VOTE_TYPE = {
   UNKNOWN: 'Unknown' as PollVoteType,
 };
 
-exports.POLLING_DB_URLS = {
+export const POLLING_DB_URLS = {
   [SupportedNetworks.mainnet]: 'https://pollingdb2-mainnet-prod.makerdao.com/api/v1',
   [SupportedNetworks.tenderly]: 'https://pollingdb2-tenderly-staging.makerdao.com/api/v1',
 };

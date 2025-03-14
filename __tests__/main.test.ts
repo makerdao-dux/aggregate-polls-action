@@ -1,11 +1,11 @@
 import { describe, expect, test } from '@jest/globals'
-import fetchSpockPolls from '../src/fetchPolls'
+import { fetchSpockPolls, fetchSubgraphPolls } from '../src/fetchPolls'
 import fetchGithubPolls from '../src/fetchGithubPolls'
 import { parseGithubMetadata } from '../src/parseGithubMetadata'
 import { SupportedNetworks, PollInputFormat } from '../src/constants'
-import { ParsedSubgraphPoll, PollWithRawMetadata } from '../src/polls'
+import { ParsedPoll, PollWithRawMetadata } from '../src/polls'
 
-const testSpockPolls: ParsedSubgraphPoll[] = [
+const testSpockPolls: ParsedPoll[] = [
   {
     pollId: 1,
     url: 'https://raw.githubusercontent.com/makerdao/community/master/governance/polls/Activate%20Liquidations%20for%20Stablecoin%20Vaults%20to%20Clear%20Bad%20Debt%20-%20October%2031%2C%202022.md',

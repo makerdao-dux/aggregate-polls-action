@@ -1,11 +1,10 @@
 import axios, { AxiosResponse } from 'axios'
 import { SUBGRAPH_URLS, POLLING_DB_URLS, SupportedNetworks } from './constants'
-import { SubgraphPoll, ParsedSubgraphPoll } from './polls'
-import { SpockPoll, ParsedSpockPoll } from './polls'
+import { SubgraphPoll, SpockPoll, ParsedPoll } from './polls'
 
 export async function fetchSpockPolls(
   network: SupportedNetworks
-): Promise<ParsedSpockPoll[]> {
+): Promise<ParsedPoll[]> {
   const res: AxiosResponse<SpockPoll> = await axios.post(
     POLLING_DB_URLS[network],
     { operationName: 'activePolls' }
@@ -43,14 +42,14 @@ export async function fetchSpockPolls(
       }
 
       return acum
-    }, [] as ParsedSpockPoll[])
+    }, [] as ParsedPoll[])
 
   return spockPollsData
 }
 
 export async function fetchSubgraphPolls(
   network: SupportedNetworks
-): Promise<ParsedSubgraphPoll[]> {
+): Promise<ParsedPoll[]> {
   const res: AxiosResponse<SubgraphPoll> = await axios.post(
     SUBGRAPH_URLS[network],
     {
@@ -100,7 +99,7 @@ export async function fetchSubgraphPolls(
       }
 
       return acum
-    }, [] as ParsedSubgraphPoll[])
+    }, [] as ParsedPoll[])
 
   return subgraphPollsData
 }
