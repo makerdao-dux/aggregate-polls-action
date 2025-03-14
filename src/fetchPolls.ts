@@ -47,6 +47,7 @@ export async function fetchSpockPolls(
   return spockPollsData
 }
 
+//TODO: add pagination to go handle more than 1000 polls
 export async function fetchSubgraphPolls(
   network: SupportedNetworks
 ): Promise<ParsedPoll[]> {
@@ -54,7 +55,7 @@ export async function fetchSubgraphPolls(
     SUBGRAPH_URLS[network],
     {
       query: `
-        {polls(orderBy: blockCreated, first: 100) {
+        {polls(orderBy: blockCreated, first: 1000) {
           id
           creator
           startDate
@@ -65,7 +66,6 @@ export async function fetchSubgraphPolls(
         }
         }
       `,
-      operationName: 'activePolls'
     }
   )
 

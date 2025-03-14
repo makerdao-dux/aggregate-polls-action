@@ -26,8 +26,13 @@ async function run(): Promise<void> {
       fetchSubgraphPolls(network)
     ]);
 
-    const fetchedPolls = [...spockPolls, ...subgraphPolls]
-
+    const cutoffDate = new Date('2025-03-01T00:00:00Z'); // TODO: Set to cutoff date
+    
+    const fetchedPolls = [
+      ...spockPolls.filter(poll => new Date(poll.startDate) < cutoffDate),
+      ...subgraphPolls.filter(poll => new Date(poll.startDate) >= cutoffDate)
+    ];
+    
     const pollsWithRawMetadata = await fetchGithubPolls(fetchedPolls)
     const polls = await parseGithubMetadata(
       pollsWithRawMetadata,
