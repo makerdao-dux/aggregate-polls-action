@@ -47,7 +47,8 @@ export async function fetchSpockPolls(
   return spockPollsData
 }
 
-//TODO: add pagination to go handle more than 1000 polls
+//get latest polls created by whitelisted addresses
+//TODO: add pagination to handle more than 1000 polls
 export async function fetchSubgraphPolls(
   network: SupportedNetworks
 ): Promise<ParsedPoll[]> {
@@ -55,7 +56,7 @@ export async function fetchSubgraphPolls(
     SUBGRAPH_URLS[network],
     {
       query: `
-        {polls(orderBy: blockCreated, first: 1000) {
+      {polls(orderBy: blockCreated, orderDirection: desc, first: 1000, where: {creator_in: ["0xdc7ee5da5d011bc98cf030968659f3ee92232843", "0x8541ccfc6e7eacebd233c6789a0fbf7c708b0e68", "0x777cc2b5ec4c50b5aec0c0d9f8d1b8599ef2a54c"]}) {
           id
           creator
           startDate
@@ -64,7 +65,7 @@ export async function fetchSubgraphPolls(
           url
           blockCreated
         }
-        }
+      }
       `,
     }
   )
