@@ -1,6 +1,6 @@
 {
   "name": "aggregate-polls-action",
-  "version": "1.4.0-beta",
+  "version": "1.4.0-beta.1",
   "private": true,
   "description": "A GitHub action to aggregate MakerDAO polls metadata",
   "main": "lib/main.js",
