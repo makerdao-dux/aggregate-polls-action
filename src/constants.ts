@@ -11,11 +11,6 @@ export const POLL_VOTE_TYPE = {
   UNKNOWN: 'Unknown' as PollVoteType,
 };
 
-export const POLLING_DB_URLS = {
-  [SupportedNetworks.mainnet]: 'https://pollingdb2-mainnet-prod.makerdao.com/api/v1',
-  [SupportedNetworks.tenderly]: 'https://pollingdb2-tenderly-staging.makerdao.com/api/v1',
-};
-
 export const SUBGRAPH_URLS = {
   [SupportedNetworks.mainnet]:
     'https://query-subgraph.sky.money/subgraphs/name/jetstreamgg/subgraph-mainnet',
