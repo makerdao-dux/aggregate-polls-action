@@ -1,7 +1,6 @@
 import * as core from '@actions/core'
 import { createHash } from 'crypto'
 import { writeFileSync } from 'fs'
-
 import { SupportedNetworks } from './constants'
 import fetchGithubPolls from './fetchGithubPolls'
 import { fetchSubgraphPolls } from './fetchPolls'
@@ -21,13 +20,12 @@ async function run(): Promise<void> {
       throw new Error('Unsupported network input parameter')
     }
 
-    const subgraphPolls = await fetchSubgraphPolls(network);
-
     const cutoffDate = new Date('2025-03-01T00:00:00Z'); // TODO: Set to cutoff date
+    const cutoffDateUnix = Math.floor(cutoffDate.getTime() / 1000);
+
+    const subgraphPolls = await fetchSubgraphPolls(network, cutoffDateUnix);
     
-    const filteredPolls = subgraphPolls.filter(poll => new Date(poll.startDate) >= cutoffDate);
-    
-    const pollsWithRawMetadata = await fetchGithubPolls(filteredPolls)
+    const pollsWithRawMetadata = await fetchGithubPolls(subgraphPolls)
     const polls = await parseGithubMetadata(
       pollsWithRawMetadata,
       pollTagsFilePath
