@@ -24,19 +24,19 @@ async function run(): Promise<void> {
     const cutoffDateUnix = Math.floor(cutoffDate.getTime() / 1000);
 
     const subgraphPolls = await fetchSubgraphPolls(network, cutoffDateUnix);
-    
+
     const pollsWithRawMetadata = await fetchGithubPolls(subgraphPolls)
     const polls = await parseGithubMetadata(
       pollsWithRawMetadata,
       pollTagsFilePath
     )
-
+    console.log('number of polls: ', polls.length);
     const pollsFile = JSON.stringify(polls, null, 2)
     const aggregatedPollsHash = createHash('sha256')
       .update(pollsFile)
       .digest('hex')
     const hashFile = JSON.stringify({ hash: aggregatedPollsHash }, null, 2)
-
+    console.log('hash: ', hashFile);
     writeFileSync(outputFilePath, pollsFile)
     writeFileSync(hashFilePath, hashFile)
   } catch (error) {
