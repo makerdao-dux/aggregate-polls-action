@@ -18,7 +18,7 @@ jobs:
           output-file: '__tests__/polls/polls.json'
           hash-file: '__tests__/polls/hashed-polls.json'
       - name: Upload output files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: poll-data
           path: |
