@@ -1,5 +1,6 @@
-name: 'build-test'
-on: # rebuild any PRs and main branch changes
+name: Run Tests
+
+on:
   pull_request:
   push:
     branches:
@@ -7,13 +8,20 @@ on: # rebuild any PRs and main branch changes
       - 'releases/*'
 
 jobs:
-  test: # make sure the action works on a clean machine without building
+  test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./
-        with:
-          network: 'mainnet'
-          tags-file: '__tests__/polls/poll-tags.json'
-          output-file: '__tests__/polls/polls.json'
-          hash-file: '__tests__/polls/hashed-polls.json'
+    - uses: actions/checkout@v3
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'yarn'
+        
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile
+      
+    - name: Run tests
+      run: yarn test

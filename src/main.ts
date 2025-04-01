@@ -1,10 +1,9 @@
 import * as core from '@actions/core'
 import { createHash } from 'crypto'
 import { writeFileSync } from 'fs'
-
 import { SupportedNetworks } from './constants'
 import fetchGithubPolls from './fetchGithubPolls'
-import fetchSpockPolls from './fetchSpockPolls'
+import { fetchSubgraphPolls } from './fetchPolls'
 import { parseGithubMetadata } from './parseGithubMetadata'
 
 async function run(): Promise<void> {
@@ -21,8 +20,12 @@ async function run(): Promise<void> {
       throw new Error('Unsupported network input parameter')
     }
 
-    const spockPolls = await fetchSpockPolls(network)
-    const pollsWithRawMetadata = await fetchGithubPolls(spockPolls)
+    const cutoffDate = new Date('2025-03-01T00:00:00Z'); // TODO: Set to cutoff date
+    const cutoffDateUnix = Math.floor(cutoffDate.getTime() / 1000);
+
+    const subgraphPolls = await fetchSubgraphPolls(network, cutoffDateUnix);
+
+    const pollsWithRawMetadata = await fetchGithubPolls(subgraphPolls)
     const polls = await parseGithubMetadata(
       pollsWithRawMetadata,
       pollTagsFilePath

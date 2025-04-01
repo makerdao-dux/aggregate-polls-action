@@ -7,7 +7,7 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ERRORS_VALIDATE_POLL_PARAMETERS = exports.PollResultDisplay = exports.PollVictoryConditions = exports.PollInputFormat = exports.POLLING_DB_URLS = exports.POLL_VOTE_TYPE = exports.SupportedNetworks = void 0;
+exports.ERRORS_VALIDATE_POLL_PARAMETERS = exports.PollResultDisplay = exports.PollVictoryConditions = exports.PollInputFormat = exports.SUBGRAPH_URLS = exports.POLL_VOTE_TYPE = exports.SupportedNetworks = void 0;
 var SupportedNetworks;
 (function (SupportedNetworks) {
     SupportedNetworks["mainnet"] = "mainnet";
@@ -18,9 +18,9 @@ exports.POLL_VOTE_TYPE = {
     RANKED_VOTE: 'Ranked Choice IRV',
     UNKNOWN: 'Unknown',
 };
-exports.POLLING_DB_URLS = {
-    [SupportedNetworks.mainnet]: 'https://pollingdb2-mainnet-prod.makerdao.com/api/v1',
-    [SupportedNetworks.tenderly]: 'https://pollingdb2-tenderly-staging.makerdao.com/api/v1',
+exports.SUBGRAPH_URLS = {
+    [SupportedNetworks.mainnet]: 'https://query-subgraph.sky.money/subgraphs/name/jetstreamgg/subgraph-mainnet',
+    [SupportedNetworks.tenderly]: 'https://query-subgraph-staging.sky.money/subgraphs/name/jetstreamgg/subgraph-testnet',
 };
 // Poll parameters
 var PollInputFormat;
@@ -91,16 +91,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const axios_1 = __importDefault(__nccwpck_require__(8757));
-function fetchGithubPolls(parsedSpockPolls) {
+function fetchGithubPolls(parsedPolls) {
     return __awaiter(this, void 0, void 0, function* () {
-        const spockPollsInChunks = [];
+        const pollsInChunks = [];
         const chunkSize = 20;
         const pollsRes = [];
-        for (let i = 0; i < parsedSpockPolls.length; i += chunkSize) {
-            spockPollsInChunks.push(parsedSpockPolls.slice(i, i + chunkSize));
+        for (let i = 0; i < parsedPolls.length; i += chunkSize) {
+            pollsInChunks.push(parsedPolls.slice(i, i + chunkSize));
         }
-        for (let j = 0; j < spockPollsInChunks.length; j++) {
-            const settledPolls = yield Promise.allSettled(spockPollsInChunks[j].map((poll) => __awaiter(this, void 0, void 0, function* () {
+        for (let j = 0; j < pollsInChunks.length; j++) {
+            const settledPolls = yield Promise.allSettled(pollsInChunks[j].map((poll) => __awaiter(this, void 0, void 0, function* () {
                 const res = yield axios_1.default.get(poll.url);
                 return Object.assign(Object.assign({}, poll), { rawMetadata: res.data });
             })));
@@ -144,7 +144,7 @@ exports.assignTags = assignTags;
 
 /***/ }),
 
-/***/ 1032:
+/***/ 5706:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -162,20 +162,37 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.fetchSubgraphPolls = void 0;
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 const constants_1 = __nccwpck_require__(5105);
-function fetchSpockPolls(network) {
+//get latest polls created by whitelisted addresses after the start date
+//TODO: add pagination to handle more than 1000 polls
+function fetchSubgraphPolls(network, argStartUnix = 0) {
     return __awaiter(this, void 0, void 0, function* () {
-        const res = yield axios_1.default.post(constants_1.POLLING_DB_URLS[network], { operationName: 'activePolls' });
-        const spockPollsData = res.data.data.activePolls.edges
-            .map(({ node: { creator, pollId, blockCreated, startDate, endDate, multiHash, url, }, }) => ({
+        const res = yield axios_1.default.post(constants_1.SUBGRAPH_URLS[network], {
+            query: `
+        query filteredPolls($argStartUnix: BigInt){polls(orderBy: blockCreated, orderDirection: desc, first: 1000, where: {startDate_gte: $argStartUnix, creator_in: ["0xdc7ee5da5d011bc98cf030968659f3ee92232843", "0x8541ccfc6e7eacebd233c6789a0fbf7c708b0e68", "0x777cc2b5ec4c50b5aec0c0d9f8d1b8599ef2a54c"]}) {
+          id
+          creator
+          startDate
+          endDate
+          multiHash
+          url
+          blockCreated
+        }
+      }
+      `,
+            variables: { argStartUnix }
+        });
+        const subgraphPollsData = res.data.data.polls
+            .map(({ creator, id, startDate, endDate, multiHash, url, blockCreated }) => ({
             creator,
-            pollId,
-            blockCreated,
-            startDate: new Date(startDate * 1000).toISOString(),
-            endDate: new Date(endDate * 1000).toISOString(),
+            pollId: Number(id),
+            startDate: new Date(Number(startDate) * 1000).toISOString(),
+            endDate: new Date(Number(endDate) * 1000).toISOString(),
             multiHash,
             url,
+            blockCreated: Number(blockCreated)
         }))
             // Removes duplicate entries
             .reduce((acum, poll, i, pollArray) => {
@@ -184,10 +201,10 @@ function fetchSpockPolls(network) {
             }
             return acum;
         }, []);
-        return spockPollsData;
+        return subgraphPollsData;
     });
 }
-exports["default"] = fetchSpockPolls;
+exports.fetchSubgraphPolls = fetchSubgraphPolls;
 
 
 /***/ }),
@@ -238,7 +255,7 @@ const crypto_1 = __nccwpck_require__(6113);
 const fs_1 = __nccwpck_require__(7147);
 const constants_1 = __nccwpck_require__(5105);
 const fetchGithubPolls_1 = __importDefault(__nccwpck_require__(4238));
-const fetchSpockPolls_1 = __importDefault(__nccwpck_require__(1032));
+const fetchPolls_1 = __nccwpck_require__(5706);
 const parseGithubMetadata_1 = __nccwpck_require__(1018);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -251,8 +268,10 @@ function run() {
                 network !== constants_1.SupportedNetworks.tenderly) {
                 throw new Error('Unsupported network input parameter');
             }
-            const spockPolls = yield (0, fetchSpockPolls_1.default)(network);
-            const pollsWithRawMetadata = yield (0, fetchGithubPolls_1.default)(spockPolls);
+            const cutoffDate = new Date('2025-03-01T00:00:00Z'); // TODO: Set to cutoff date
+            const cutoffDateUnix = Math.floor(cutoffDate.getTime() / 1000);
+            const subgraphPolls = yield (0, fetchPolls_1.fetchSubgraphPolls)(network, cutoffDateUnix);
+            const pollsWithRawMetadata = yield (0, fetchGithubPolls_1.default)(subgraphPolls);
             const polls = yield (0, parseGithubMetadata_1.parseGithubMetadata)(pollsWithRawMetadata, pollTagsFilePath);
             const pollsFile = JSON.stringify(polls, null, 2);
             const aggregatedPollsHash = (0, crypto_1.createHash)('sha256')
@@ -385,7 +404,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.markdownToHtml = exports.hasVictoryConditionComparison = exports.hasVictoryConditionDefault = exports.hasVictoryConditionAND = exports.hasVictoryConditionApproval = exports.hasVictoryConditionMajority = exports.hasVictoryConditionPlurality = exports.hasVictoryConditionInstantRunOff = exports.findVictoryCondition = void 0;
 const unified_1 = __nccwpck_require__(4601);
 const remark_parse_1 = __importDefault(__nccwpck_require__(8369));
-const remark_gfm_1 = __importDefault(__nccwpck_require__(4108));
+const remark_gfm_1 = __importDefault(__nccwpck_require__(4365));
 const remark_rehype_1 = __importDefault(__nccwpck_require__(4671));
 const rehype_sanitize_1 = __importDefault(__nccwpck_require__(4973));
 const rehype_stringify_1 = __importDefault(__nccwpck_require__(5746));
@@ -3243,14 +3262,17 @@ function useColors() {
 		return false;
 	}
 
+	let m;
+
 	// Is webkit? http://stackoverflow.com/a/16459606/376773
 	// document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
+	// eslint-disable-next-line no-return-assign
 	return (typeof document !== 'undefined' && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance) ||
 		// Is firebug? http://stackoverflow.com/a/398120/376773
 		(typeof window !== 'undefined' && window.console && (window.console.firebug || (window.console.exception && window.console.table))) ||
 		// Is firefox >= v31?
 		// https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
-		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31) ||
+		(typeof navigator !== 'undefined' && navigator.userAgent && (m = navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/)) && parseInt(m[1], 10) >= 31) ||
 		// Double check webkit in userAgent just in case we are in a worker
 		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/));
 }
@@ -3560,24 +3582,62 @@ function setup(env) {
 		createDebug.names = [];
 		createDebug.skips = [];
 
-		let i;
-		const split = (typeof namespaces === 'string' ? namespaces : '').split(/[\s,]+/);
-		const len = split.length;
+		const split = (typeof namespaces === 'string' ? namespaces : '')
+			.trim()
+			.replace(' ', ',')
+			.split(',')
+			.filter(Boolean);
 
-		for (i = 0; i < len; i++) {
-			if (!split[i]) {
-				// ignore empty strings
-				continue;
-			}
-
-			namespaces = split[i].replace(/\*/g, '.*?');
-
-			if (namespaces[0] === '-') {
-				createDebug.skips.push(new RegExp('^' + namespaces.slice(1) + '$'));
+		for (const ns of split) {
+			if (ns[0] === '-') {
+				createDebug.skips.push(ns.slice(1));
 			} else {
-				createDebug.names.push(new RegExp('^' + namespaces + '$'));
+				createDebug.names.push(ns);
 			}
 		}
+	}
+
+	/**
+	 * Checks if the given string matches a namespace template, honoring
+	 * asterisks as wildcards.
+	 *
+	 * @param {String} search
+	 * @param {String} template
+	 * @return {Boolean}
+	 */
+	function matchesTemplate(search, template) {
+		let searchIndex = 0;
+		let templateIndex = 0;
+		let starIndex = -1;
+		let matchIndex = 0;
+
+		while (searchIndex < search.length) {
+			if (templateIndex < template.length && (template[templateIndex] === search[searchIndex] || template[templateIndex] === '*')) {
+				// Match character or proceed with wildcard
+				if (template[templateIndex] === '*') {
+					starIndex = templateIndex;
+					matchIndex = searchIndex;
+					templateIndex++; // Skip the '*'
+				} else {
+					searchIndex++;
+					templateIndex++;
+				}
+			} else if (starIndex !== -1) { // eslint-disable-line no-negated-condition
+				// Backtrack to the last '*' and try to match more characters
+				templateIndex = starIndex + 1;
+				matchIndex++;
+				searchIndex = matchIndex;
+			} else {
+				return false; // No match
+			}
+		}
+
+		// Handle trailing '*' in template
+		while (templateIndex < template.length && template[templateIndex] === '*') {
+			templateIndex++;
+		}
+
+		return templateIndex === template.length;
 	}
 
 	/**
@@ -3588,8 +3648,8 @@ function setup(env) {
 	*/
 	function disable() {
 		const namespaces = [
-			...createDebug.names.map(toNamespace),
-			...createDebug.skips.map(toNamespace).map(namespace => '-' + namespace)
+			...createDebug.names,
+			...createDebug.skips.map(namespace => '-' + namespace)
 		].join(',');
 		createDebug.enable('');
 		return namespaces;
@@ -3603,39 +3663,19 @@ function setup(env) {
 	* @api public
 	*/
 	function enabled(name) {
-		if (name[name.length - 1] === '*') {
-			return true;
-		}
-
-		let i;
-		let len;
-
-		for (i = 0, len = createDebug.skips.length; i < len; i++) {
-			if (createDebug.skips[i].test(name)) {
+		for (const skip of createDebug.skips) {
+			if (matchesTemplate(name, skip)) {
 				return false;
 			}
 		}
 
-		for (i = 0, len = createDebug.names.length; i < len; i++) {
-			if (createDebug.names[i].test(name)) {
+		for (const ns of createDebug.names) {
+			if (matchesTemplate(name, ns)) {
 				return true;
 			}
 		}
 
 		return false;
-	}
-
-	/**
-	* Convert regexp to namespace
-	*
-	* @param {RegExp} regxep
-	* @return {String} namespace
-	* @api private
-	*/
-	function toNamespace(regexp) {
-		return regexp.toString()
-			.substring(2, regexp.toString().length - 2)
-			.replace(/\.\*\?$/, '*');
 	}
 
 	/**
@@ -3721,7 +3761,7 @@ exports.colors = [6, 2, 3, 4, 5, 1];
 try {
 	// Optional dependency (as in, doesn't need to be installed, NOT like optionalDependencies in package.json)
 	// eslint-disable-next-line import/no-extraneous-dependencies
-	const supportsColor = __nccwpck_require__(9318);
+	const supportsColor = __nccwpck_require__(132);
 
 	if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
 		exports.colors = [
@@ -3879,11 +3919,11 @@ function getDate() {
 }
 
 /**
- * Invokes `util.format()` with the specified arguments and writes to stderr.
+ * Invokes `util.formatWithOptions()` with the specified arguments and writes to stderr.
  */
 
 function log(...args) {
-	return process.stderr.write(util.format(...args) + '\n');
+	return process.stderr.write(util.formatWithOptions(exports.inspectOpts, ...args) + '\n');
 }
 
 /**
@@ -6019,22 +6059,6 @@ exports.arrayify = function(val) {
 exports.startsWith = function(str, substr, len) {
   if (typeof len !== 'number') len = substr.length;
   return str.slice(0, len) === substr;
-};
-
-
-/***/ }),
-
-/***/ 1621:
-/***/ ((module) => {
-
-"use strict";
-
-
-module.exports = (flag, argv = process.argv) => {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
 };
 
 
@@ -10625,7 +10649,7 @@ var y = d * 365.25;
  * @api public
  */
 
-module.exports = function(val, options) {
+module.exports = function (val, options) {
   options = options || {};
   var type = typeof val;
   if (type === 'string' && val.length > 0) {
@@ -11044,149 +11068,6 @@ module.exports = function(str) {
     return str.slice(1);
   }
   return str;
-};
-
-
-/***/ }),
-
-/***/ 9318:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-const os = __nccwpck_require__(2037);
-const tty = __nccwpck_require__(6224);
-const hasFlag = __nccwpck_require__(1621);
-
-const {env} = process;
-
-let forceColor;
-if (hasFlag('no-color') ||
-	hasFlag('no-colors') ||
-	hasFlag('color=false') ||
-	hasFlag('color=never')) {
-	forceColor = 0;
-} else if (hasFlag('color') ||
-	hasFlag('colors') ||
-	hasFlag('color=true') ||
-	hasFlag('color=always')) {
-	forceColor = 1;
-}
-
-if ('FORCE_COLOR' in env) {
-	if (env.FORCE_COLOR === 'true') {
-		forceColor = 1;
-	} else if (env.FORCE_COLOR === 'false') {
-		forceColor = 0;
-	} else {
-		forceColor = env.FORCE_COLOR.length === 0 ? 1 : Math.min(parseInt(env.FORCE_COLOR, 10), 3);
-	}
-}
-
-function translateLevel(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3
-	};
-}
-
-function supportsColor(haveStream, streamIsTTY) {
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (hasFlag('color=16m') ||
-		hasFlag('color=full') ||
-		hasFlag('color=truecolor')) {
-		return 3;
-	}
-
-	if (hasFlag('color=256')) {
-		return 2;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10 &&
-			Number(osRelease[2]) >= 10586
-		) {
-			return Number(osRelease[2]) >= 14931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env) {
-		if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'GITHUB_ACTIONS', 'BUILDKITE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env) {
-		const version = parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env.TERM_PROGRAM) {
-			case 'iTerm.app':
-				return version >= 3 ? 3 : 2;
-			case 'Apple_Terminal':
-				return 2;
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env) {
-		return 1;
-	}
-
-	return min;
-}
-
-function getSupportLevel(stream) {
-	const level = supportsColor(stream, stream && stream.isTTY);
-	return translateLevel(level);
-}
-
-module.exports = {
-	supportsColor: getSupportLevel,
-	stdout: translateLevel(supportsColor(true, tty.isatty(1))),
-	stderr: translateLevel(supportsColor(true, tty.isatty(2)))
 };
 
 
@@ -12275,6 +12156,14 @@ exports["default"] = _default;
     }
 
 })(module);
+
+
+/***/ }),
+
+/***/ 132:
+/***/ ((module) => {
+
+module.exports = eval("require")("supports-color");
 
 
 /***/ }),
@@ -23828,7 +23717,7 @@ function rehypeStringify(config) {
 
 /***/ }),
 
-/***/ 4108:
+/***/ 4365:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -26015,7 +25904,7 @@ function gfmHtml(options) {
 
 // EXTERNAL MODULE: ./node_modules/ccount/index.js
 var ccount = __nccwpck_require__(6947);
-;// CONCATENATED MODULE: ./node_modules/mdast-util-find-and-replace/node_modules/escape-string-regexp/index.js
+;// CONCATENATED MODULE: ./node_modules/escape-string-regexp/index.js
 function escapeStringRegexp(string) {
 	if (typeof string !== 'string') {
 		throw new TypeError('Expected a string');

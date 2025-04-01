@@ -23,7 +23,21 @@ export type SpockPoll = {
   }
 }
 
-export type ParsedSpockPoll = {
+export type SubgraphPoll = {
+  data: {
+      polls: {
+        creator: string
+        id: string
+        blockCreated: string
+        startDate: string
+        endDate: string
+        multiHash: string
+        url: string
+  }[]
+}
+}
+
+export type ParsedPoll = {
   pollId: number
   url: string
   multiHash: string
@@ -34,7 +48,7 @@ export type ParsedSpockPoll = {
   blockCreated: number
 }
 
-export type PollWithRawMetadata = ParsedSpockPoll & {
+export type PollWithRawMetadata = ParsedPoll & {
   rawMetadata: string
 }
 
@@ -101,7 +115,7 @@ type PollParameters = {
   resultDisplay: PollResultDisplay
 }
 
-export type PollMetadata = ParsedSpockPoll & {
+export type PollMetadata = ParsedPoll & {
   title: string
   summary: string
   discussionLink: string
