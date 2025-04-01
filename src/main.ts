@@ -30,7 +30,7 @@ async function run(): Promise<void> {
       pollsWithRawMetadata,
       pollTagsFilePath
     )
-    core.info(`number of polls: ${polls.length}`);
+
     const pollsFile = JSON.stringify(polls, null, 2)
     const aggregatedPollsHash = createHash('sha256')
       .update(pollsFile)
