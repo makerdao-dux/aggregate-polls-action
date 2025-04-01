@@ -27,7 +27,7 @@ export async function fetchSubgraphPolls(
     }
   )
 
-  const subgraphPollsData = res.data.data.polls
+  const subgraphPollsData = res.data.polls
     .map(
       ({
           creator,

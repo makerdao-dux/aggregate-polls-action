@@ -24,17 +24,15 @@ export type SpockPoll = {
 }
 
 export type SubgraphPoll = {
-    data: {
-        polls: {
-          creator: string
-          id: string
-          blockCreated: string
-          startDate: string
-          endDate: string
-          multiHash: string
-          url: string
-    }[]
-  }
+      polls: {
+        creator: string
+        id: string
+        blockCreated: string
+        startDate: string
+        endDate: string
+        multiHash: string
+        url: string
+  }[]
 }
 
 export type ParsedPoll = {
