@@ -24,6 +24,7 @@ export type SpockPoll = {
 }
 
 export type SubgraphPoll = {
+  data: {
       polls: {
         creator: string
         id: string
@@ -33,6 +34,7 @@ export type SubgraphPoll = {
         multiHash: string
         url: string
   }[]
+}
 }
 
 export type ParsedPoll = {

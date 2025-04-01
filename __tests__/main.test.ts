@@ -1,11 +1,11 @@
-import { describe, expect, test } from '@jest/globals'
+import { describe, expect, test } from 'vitest'
 import { fetchSubgraphPolls } from '../src/fetchPolls'
 import fetchGithubPolls from '../src/fetchGithubPolls'
 import { parseGithubMetadata } from '../src/parseGithubMetadata'
 import { SupportedNetworks } from '../src/constants'
 import { ParsedPoll, PollWithRawMetadata } from '../src/polls'
 
-const testSpockPolls: ParsedPoll[] = [
+const testSubgraphPolls: ParsedPoll[] = [
   {
     pollId: 1,
     url: 'https://raw.githubusercontent.com/makerdao/community/master/governance/polls/Activate%20Liquidations%20for%20Stablecoin%20Vaults%20to%20Clear%20Bad%20Debt%20-%20October%2031%2C%202022.md',
@@ -83,7 +83,9 @@ const pollTagsFilePath = '__tests__/polls/poll-tags.json'
 
 describe('Polling module', () => {
   test('Fetch subgraph polls', async () => {
-    const subgraphPolls = await fetchSubgraphPolls(SupportedNetworks.mainnet)
+    const cutoffDate = new Date('2025-03-01T00:00:00Z')
+    const cutoffDateUnix = Math.floor(cutoffDate.getTime() / 1000)
+    const subgraphPolls = await fetchSubgraphPolls(SupportedNetworks.mainnet, cutoffDateUnix)
     
     expect(subgraphPolls.length).toBeGreaterThan(0)
     expect(subgraphPolls[0].pollId).toBeDefined()
@@ -112,7 +114,7 @@ describe('Polling module', () => {
   })
 
   test('Fetch GitHub polls', async () => {
-    const githubPolls = await fetchGithubPolls(testSpockPolls)
+    const githubPolls = await fetchGithubPolls(testSubgraphPolls)
 
     expect(githubPolls).toHaveLength(3)
     expect(githubPolls[1].pollId).toBe(2)
@@ -133,7 +135,7 @@ describe('Polling module', () => {
     expect(polls[0].options).toEqual({ '0': 'Abstain', '1': 'Yes', '2': 'No' })
     expect(
       polls[0].content.endsWith(
-        'To add current and upcoming votes to your calendar, please see the [MakerDAO Public Events Calendar](https://calendar.google.com/calendar/embed?src=makerdao.com_3efhm2ghipksegl009ktniomdk%40group.calendar.google.com&ctz=America%2FLos_Angeles).\n'
+        '<p>To add current and upcoming votes to your calendar, please see the <a target="_blank" href="https://calendar.google.com/calendar/embed?src=makerdao.com_3efhm2ghipksegl009ktniomdk%40group.calendar.google.com&#x26;ctz=America%2FLos_Angeles">MakerDAO Public Events Calendar</a>.</p>'
       )
     ).toBe(true)
     expect(polls[0].discussionLink).toBe('https://forum.makerdao.com/t/914')
