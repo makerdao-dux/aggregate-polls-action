@@ -80,3 +80,7 @@ Based on:
 
 - https://github.com/actions/typescript-action
 - https://docs.github.com/en/actions/creating-actions/creating-a-javascript-action
+
+#Deploying
+
+Be sure to run `yarn build` and `yarn package` before deploying, to update both the lib/ and dist/ folders, and commit these changes.
