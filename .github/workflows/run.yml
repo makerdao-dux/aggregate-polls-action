@@ -1,4 +1,4 @@
-name: 'build-test'
+name: 'Run Action'
 on: # rebuild any PRs and main branch changes
   pull_request:
   push:
@@ -17,3 +17,10 @@ jobs:
           tags-file: '__tests__/polls/poll-tags.json'
           output-file: '__tests__/polls/polls.json'
           hash-file: '__tests__/polls/hashed-polls.json'
+      - name: Upload output files
+        uses: actions/upload-artifact@v3
+        with:
+          name: poll-data
+          path: |
+            __tests__/polls/polls.json
+            __tests__/polls/hashed-polls.json
